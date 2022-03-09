@@ -75,7 +75,7 @@ install-git-hook:
 install:
 	pip3 install -r requirements.txt
 	pip3 install -r requirements-dev.txt
-	$(MAKE) install-git-hook
+	# $(MAKE) install-git-hook
 
 .PHONY: pytest
 pytest:
