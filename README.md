@@ -1,6 +1,25 @@
 # paddle-prompt
 
-Prompt Toolkit for PaddlePaddle Deep Learning Framework
+Prompt Toolkit for PaddlePaddle Deep Learning Framework. Inspired by [thunlp/OpenPrompt](https://github.com/thunlp/OpenPrompt).
+
+***
+
+## Installation
+
+`paddle-prompt` is built under Python3.7+ and [Paddle](https://github.com/PaddlePaddle/Paddle). You can install `paddle-prompt` with pip:
+
+```shell
+pip install paddle-prompt
+```
+
+## TODOS
+
+- [ ] complete PLMs
+- [ ] complete template
+- [ ] complete verbalizer
+- [ ] create text classification datasets
+- ...
+
 
 
 ## Stargazers over time
