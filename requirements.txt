@@ -1,0 +1,3 @@
+semver
+paddlepaddle
+paddlenlp

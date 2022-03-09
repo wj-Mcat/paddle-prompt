@@ -1,0 +1,3 @@
+include LICENSE README.md VERSION
+recursive-include paddle_prompt *.py
+recursive-exclude paddle_prompt *_test.py
