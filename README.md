@@ -1,6 +1,9 @@
 # paddle-prompt
 
-Prompt Toolkit for PaddlePaddle Deep Learning Framework. Inspired by [thunlp/OpenPrompt](https://github.com/thunlp/OpenPrompt).
+Prompt Toolkit for PaddlePaddle Deep Learning Framework. Inspired by :
+
+* [thunlp/OpenPrompt](https://github.com/thunlp/OpenPrompt)
+* [AutoPrompt](https://arxiv.org/abs/2010.15980)
 
 ***
 

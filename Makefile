@@ -85,11 +85,7 @@ pytest:
 test-unit: pytest
 
 .PHONY: test
-test: check-python-version lint pytest
-
-.PHONY: check-python-version
-check-python-version:
-	./scripts/check_python_version.py
+test: lint pytest
 
 code:
 	code .
