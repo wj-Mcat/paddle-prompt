@@ -74,7 +74,6 @@ setuptools.setup(
     license='Apache-2.0',
     url='https://github.com/wj-Mcat/paddle-prompt',
     packages=setuptools.find_packages('paddle_prompt'),
-    package_dir={'': ''},
     install_requires=get_install_requires(),
     classifiers=[
         'Programming Language :: Python :: 3.7',
