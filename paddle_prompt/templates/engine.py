@@ -24,6 +24,7 @@ class Engine(ABC):
             label_template = json.load(file_handler)
         return cls(label_template)
 
+
 class JinjaEngine(Engine):
     def __init__(self, label_templates: Dict[str, str]) -> None:
         super().__init__(label_templates)

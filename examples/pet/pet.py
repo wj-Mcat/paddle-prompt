@@ -141,21 +141,21 @@ def main():
         train_ds,
         mode='train',
         batch_size=config.batch_size,
-        batchify_fn=batchify_fn,
+        collate_fn=batchify_fn,
         trans_fn=trans_func)
 
     public_test_data_loader = create_dataloader(
         public_test_ds,
         mode='eval',
         batch_size=config.batch_size,
-        batchify_fn=batchify_fn,
+        collate_fn=batchify_fn,
         trans_fn=trans_func)
 
     test_data_loader = create_dataloader(
         test_ds,
         mode='eval',
         batch_size=config.batch_size,
-        batchify_fn=batchify_test_fn,
+        collate_fn=batchify_test_fn,
         trans_fn=trans_test_func)
 
     num_training_steps = len(train_data_loader) * config.epochs

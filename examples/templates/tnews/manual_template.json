@@ -1,0 +1,92 @@
+{
+    "news_story": {
+        "labels": [
+            "故事"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_culture": {
+        "labels": [
+            "文化"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_entertainment": {
+        "labels": [
+            "娱乐"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_sports": {
+        "labels": [
+            "体育"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_finance": {
+        "labels": [
+            "财经"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_house": {
+        "labels": [
+            "房产"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_car": {
+        "labels": [
+            "汽车"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_edu": {
+        "labels": [
+            "教育"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_tech": {
+        "labels": [
+            "科技"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_military": {
+        "labels": [
+            "军事"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_travel": {
+        "labels": [
+            "旅游"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_world": {
+        "labels": [
+            "国际"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_stock": {
+        "labels": [
+            "股票"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_agriculture": {
+        "labels": [
+            "农业"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    },
+    "news_game": {
+        "labels": [
+            "电竞"
+        ],
+        "template": "{{text}} 这是[MASK]新闻"
+    }
+}
