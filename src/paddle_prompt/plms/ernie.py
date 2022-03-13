@@ -48,14 +48,14 @@ class ErnieMLMCriterion(paddle.nn.Layer):
     def forward(
         self,
         prediction_scores: Tensor,
-        masked_lm_labels: Tensor,
+        mask_label_ids: Tensor,
         masked_lm_scale: float =1.0
     ):
-        masked_lm_labels = paddle.reshape(masked_lm_labels, shape=[-1, 1])
+        mask_label_ids = paddle.reshape(mask_label_ids, shape=[-1, 1])
         with paddle.static.amp.fp16_guard():
             masked_lm_loss = F.softmax_with_cross_entropy(
                 prediction_scores,
-                masked_lm_labels,
+                mask_label_ids,
                 ignore_index=-1
             )
             masked_lm_loss = masked_lm_loss / masked_lm_scale

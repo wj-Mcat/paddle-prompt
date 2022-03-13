@@ -36,6 +36,8 @@ from paddle_prompt.processors.base_processor import DataProcessor
 from paddle_prompt.data.utils import create_dataloader, extract_and_stack_by_fields, num
 from paddle_prompt.plms.ernie import ErnieMLMCriterion
 from paddle_prompt.templates.manual_template import ManualTemplate
+from paddle_prompt.verbalizers import compute_mask_label_logits
+
 
 def set_seed(seed):
     """sets random seed"""
@@ -224,8 +226,7 @@ class Trainer:
                     input_ids=input_ids, 
                     predict_mask=prediction_mask
                 )
-                loss = self.criterion(logits, mask_label_ids)
-
+                loss = compute_mask_label_logits(logits, mask_label_ids).mean()
                 self.context_data.logits = logits
                 self.context_data.loss = loss
                 self.context_data.labels = labels
