@@ -1,4 +1,4 @@
-
+export PYTHONPATH=src/
 SOURCE_GLOB=$(wildcard paddle_prompt/*.py tests/**/*.py examples/*.py)
 
 IGNORE_PEP=E203,E221,E241,E272,E501,F811
@@ -9,7 +9,7 @@ all : clean lint
 
 .PHONY: clean
 clean:
-	rm -fr dist/* .pytype ./paddle_prompt/**/*.pyi ./paddle_prompt/*.pyi
+	rm -fr dist/ build/ .pytype ./src/paddle_prompt/**/*.pyi ./src/paddle_prompt/*.pyi
 
 .PHONY: lint
 lint: pylint pycodestyle flake8 mypy
@@ -117,7 +117,7 @@ version:
 
 .PHONY: deploy-version
 deploy-version:
-	echo "version = '$$(cat VERSION)'" > paddle_prompt/version.py
+	echo "version = '$$(cat VERSION)'" > src/paddle_prompt/version.py
 
 .PHONY: doc
 doc:
