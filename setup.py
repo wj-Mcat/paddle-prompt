@@ -73,7 +73,8 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     license='Apache-2.0',
     url='https://github.com/wj-Mcat/paddle-prompt',
-    packages=setuptools.find_packages('paddle_prompt'),
+    packages=setuptools.find_packages('src'),
+    package_dir={'': 'src'},
     install_requires=get_install_requires(),
     classifiers=[
         'Programming Language :: Python :: 3.7',

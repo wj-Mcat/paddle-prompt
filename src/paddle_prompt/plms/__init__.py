@@ -6,7 +6,7 @@ from paddle_prompt.plms.ernie import ErnieForMLM
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 from paddlenlp.transformers.ernie.tokenizer import ErnieTokenizer
 
-
+from paddle_prompt
 
 def _load_ernie_plm(model_name_or_path: str):
     return ErnieTokenizer.from_pretrained(model_name_or_path), ErnieForMLM.from_pretrained(model_name_or_path)
