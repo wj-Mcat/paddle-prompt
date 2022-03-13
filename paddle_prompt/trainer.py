@@ -8,6 +8,7 @@ import random
 import shutil
 from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional
+from matplotlib.pyplot import axis
 import numpy as np
 import paddle
 import paddle.nn.functional as F
@@ -24,19 +25,17 @@ from paddlenlp.data import Stack, Tuple, Pad
 from paddlenlp.datasets import load_dataset, MapDataset
 from paddlenlp.transformers import LinearDecayWithWarmup
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
+from paddlenlp.transformers.model_utils import PretrainedModel
 from loguru import logger
 from visualdl import LogWriter
 
-from src.processors import convert_example, create_dataloader, processors_map
-from src.processors.base_processor import DataProcessor
-from src.config import Config
 from tqdm import tqdm
-from src.models.cnn import CNNConfig, CNNClassifier
-from src.models.simple_classifier import SimpleConfig, SimpleClassifier
-from src.models.rnn import RNNConfig, RNNClassifier
-from src.models.utils import num
-from src.data import InputExample, InputFeature, ExampleDataset, extract_and_stack_by_fields
-
+from paddle_prompt.data.schema import InputExample, InputFeature
+from paddle_prompt.config import Config
+from paddle_prompt.processors.base_processor import DataProcessor
+from paddle_prompt.data.utils import create_dataloader, extract_and_stack_by_fields, num
+from paddle_prompt.plms.ernie import ErnieMLMCriterion
+from paddle_prompt.templates.manual_template import ManualTemplate
 
 def set_seed(seed):
     """sets random seed"""
@@ -69,30 +68,29 @@ class ContextContainer(dict):
 
 
 class Trainer:
-    def __init__(self, config: Config, processor: DataProcessor, classifier) -> None:
+    def __init__(self, config: Config, processor: DataProcessor, classifier: PretrainedModel, tokenizer: PretrainedTokenizer) -> None:
         self.config = config
         self.set_device()
-        self.tokenizer: PretrainedTokenizer = ppnlp.transformers.BertTokenizer.from_pretrained(
-            config.pretrained_model)
 
         # 2. build data related objects
         self.train_dataset = processor.get_train_dataset()
         self.dev_dataset = processor.get_dev_dataset()
         self.test_dataset = processor.get_test_dataset()
+        
         self.train_dataloader = create_dataloader(
             self.train_dataset,
             batch_size=config.batch_size,
-            collate_fn=lambda examples: self.collate_fn(examples, self.train_dataset.label2idx),
+            collate_fn=lambda examples: self.template.wrap_examples(examples, self.train_dataset.label2idx),
         )
         self.dev_dataloader = create_dataloader(
             self.dev_dataset,
             batch_size=config.batch_size,
-            collate_fn=lambda examples: self.collate_fn(examples, self.dev_dataset.label2idx),
+            collate_fn=lambda examples: self.template.wrap_examples(examples, self.dev_dataset.label2idx),
         )
         self.test_dataloader = create_dataloader(
             self.test_dataset,
             batch_size=config.batch_size,
-            collate_fn=lambda examples: self.collate_fn(examples, self.test_dataset.label2idx),
+            collate_fn=lambda examples: self.template.wrap_examples(examples, self.test_dataset.label2idx),
         )
 
         # 3. init model related
@@ -118,53 +116,20 @@ class Trainer:
             weight_decay=config.weight_decay,
             apply_decay_param_fun=lambda x: x in decay_params)
 
-        self.criterion = paddle.nn.loss.CrossEntropyLoss()
+        self.criterion = ErnieMLMCriterion()
+
         self.metric: Metric = paddle.metric.Accuracy()
 
         self.context_data = ContextContainer()
         self._init_output_dir()
         self.writer: LogWriter = LogWriter(logdir=config.output_dir)
 
+        self.template = ManualTemplate(tokenizer, config)
+
     def _init_output_dir(self):
         if os.path.exists(self.config.output_dir):
             shutil.rmtree(self.config.output_dir) 
         os.makedirs(self.config.output_dir)
-
-    def collate_fn(self, examples: List[InputExample], label2idx: Dict[str, int]):
-        # 1. construct text or text pair dataset
-        is_pair = examples[0].text_pair is not None
-        has_label = examples[0].label is not None
-        if is_pair:
-            texts = [(example.text, example.text_pair) for example in examples]
-        else:
-            texts = [example.text for example in examples]
-
-        encoded_features = self.tokenizer.batch_encode(
-            texts,
-            max_seq_len=self.config.max_seq_length,
-            pad_to_max_seq_len=True,
-            return_token_type_ids=True
-        )
-        fields = ['input_ids', 'token_type_ids']
-        
-        # 2. return different data based on label
-        if not has_label:
-            return extract_and_stack_by_fields(encoded_features, fields)
-        
-        label_ids = []
-        is_multi_class = isinstance(examples[0].label, list)
-        if not is_multi_class:
-            label_ids = [label2idx[example.label] for example in examples]
-        else:
-            for example in examples:
-                example_label_ids = [label2idx[label] for label in example.label]
-                label_ids.append(example_label_ids)
-        
-        features = extract_and_stack_by_fields(encoded_features, fields)
-        features.append(
-            np.array(label_ids)
-        )
-        return features
 
     def set_device(self):
         paddle.set_device(self.config.device)
@@ -216,7 +181,8 @@ class Trainer:
         self.train_bar.update()
 
         # 2. compute acc on training dataset
-        train_acc = num(paddle.mean(self.metric.compute(self.context_data.logits, self.context_data.labels)))
+        # train_acc = num(paddle.mean(self.metric.compute(self.context_data.logits, self.context_data.labels)))
+        train_acc = 0
         self.context_data.train_acc = train_acc
         self.writer.add_scalar('train-loss', step=self.context_data.train_step, value=self.context_data.loss)
         self.writer.add_scalar('train-acc', step=self.context_data.train_step, value=train_acc)
@@ -247,7 +213,7 @@ class Trainer:
         self.train_bar = tqdm(total=len(self.train_dataloader))
 
         for step, batch in enumerate(self.train_dataloader, start=1):
-            input_ids, token_type_ids, labels = batch
+            input_ids, token_type_ids, prediction_mask, mask_label_ids, labels = batch
 
             self.on_batch_start()
 
@@ -256,10 +222,9 @@ class Trainer:
                     custom_white_list=["layer_norm", "softmax", "gelu"], ):
                 logits = self.model(
                     input_ids=input_ids, 
-                    token_type_ids=token_type_ids
+                    predict_mask=prediction_mask
                 )
-
-                loss = self.criterion(logits, labels)
+                loss = self.criterion(logits, mask_label_ids)
 
                 self.context_data.logits = logits
                 self.context_data.loss = loss

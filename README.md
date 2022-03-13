@@ -24,7 +24,6 @@ pip install paddle-prompt
 - ...
 
 
-
 ## Stargazers over time
 
 [![Stargazers over time](https://starchart.cc/wj-Mcat/paddle-prompt.svg)](https://github.com/wj-Mcat/paddle-prompt)

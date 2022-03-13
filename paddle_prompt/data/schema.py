@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Union
 from dataclasses import dataclass, field
 from collections import OrderedDict
+from anyio import sleep_until
 import numpy as np
 
 from dataclasses_json import dataclass_json 
@@ -42,6 +43,12 @@ class InputExample:
     text_pair: Optional[str] = None             # for sentence pair task
     target_text: Optional[str] = None           # for generation task
     meta: Dict[str, Any] = field(default_factory=dict)  # store the meta data of training example
+
+    @property
+    def text_or_pairs(self):
+        if self.text_pair:
+            return self.text, self.text_pair
+        return self.text
 
 
 class ExampleDataset(Dataset):
