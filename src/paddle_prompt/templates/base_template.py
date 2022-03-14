@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from distutils.command.config import config
 import json
 from typing import Dict, List, Optional
@@ -29,6 +29,19 @@ def _load_label2words(file: str) -> Dict[str, str]:
         for label, label_obj in data.items():
             label2words[label] = label_obj['labels'][0]
     return label2words
+
+
+class SoftMixin:
+    def soft_token_ids(self) -> List[int]:
+        """
+        This function identifies which tokens are soft tokens.
+
+        Sometimes tokens in the template are not from the vocabulary, 
+        but a sequence of soft tokens.
+        In this case, you need to implement this function
+        """
+        raise NotImplementedError
+    
 
 class Template(nn.Layer, ABC):
     """
@@ -104,8 +117,6 @@ class Template(nn.Layer, ABC):
             np.array(label_ids)
         )
         return features
-
-    
 
     def wrap_feature(self, feature: InputFeature) -> InputFeature:
         pass
