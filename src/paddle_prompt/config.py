@@ -29,11 +29,21 @@ class TrainConfigMixin(Tap):
     
     label2idx: Dict[str, int] = None
 
+    do_train: bool = True
+    do_dev: bool = True
+
+    do_test: bool = True
+
+    @property
+    def label_num(self) -> int:
+        return len(self.label2idx)
+
 
 class TemplateConfigMixin(Tap):
     freeze_plm: bool = False
     mask_token: str = '[MASK]'
-    label_size: int = 2
+    max_token_num: int = 2
+    max_span_num: int = 1   # the default max number of span is 1
     render_engine: str = 'jinja2'
     template_file: str = './glue_data/tnews/manual_template.json'
 

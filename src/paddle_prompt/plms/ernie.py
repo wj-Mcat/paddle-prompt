@@ -2,6 +2,7 @@ from __future__ import annotations
 import paddle
 import paddle.nn.functional as F
 from paddlenlp.transformers.ernie.modeling import ErniePretrainedModel, ErniePretrainingHeads, ErnieLMPredictionHead, ErnieModel
+from paddlenlp.transformers.ernie.tokenizer import ErnieTokenizer
 from paddle_prompt.config import Tensor, Config
 
 
@@ -31,17 +32,6 @@ class ErnieForMLM(ErniePretrainedModel):
                 predict_mask
             )
             return prediction_scores
-
-    def predict(
-        self,
-        input_ids: Tensor,
-        predict_mask: Tensor
-    ):
-        prediction_logits = self.forward(
-            input_ids=input_ids,
-            masked_positions=predict_mask
-        )
-        return F.softmax(prediction_logits)
 
 
 class ErnieMLMCriterion(paddle.nn.Layer):

@@ -61,3 +61,16 @@ class JinjaEngine(Engine):
 
         template: Jinja2Template = self._label_jinja2_template[example.label]
         return template.render(example.to_dict())
+    
+    def _check_template_format(self, text: str) ->bool:
+        """check if the template is valid
+        TODO: use the jinja2 method handle checking
+
+        Args:
+            text (str): the source of the template string 
+
+        Returns:
+            bool: the result validation of the template 
+        """
+        # TODO: to be fixed later
+        return True
