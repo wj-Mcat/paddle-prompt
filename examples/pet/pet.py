@@ -3,8 +3,6 @@ Implement Paper: https://arxiv.org/abs/2001.07676
 """
 from __future__ import annotations
 
-from loguru import logger
-
 from paddle_prompt.config import Config
 from paddle_prompt.plms.ernie import ErnieForMLM, ErnieTokenizer, ErnieMLMCriterion
 from paddle_prompt.templates.manual_template import ManualTemplate

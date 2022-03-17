@@ -141,3 +141,15 @@ class Verbalizer:
         label_words_probs = label_words_probs.reshape(shape[0], -1) / norm
         label_words_probs = label_words_probs.reshape(*shape)
         return label_words_probs
+    
+    def compute_acc(self, logits: Tensor, label_ids: Tensor) -> float:
+        """compute the acc based on the logits and label_ids
+
+        Args:
+            logits (Tensor): the logits from the PLM
+            label_ids (Tensor): the golden truth of label ids
+
+        Returns:
+            float: the final label_ids
+        """
+        

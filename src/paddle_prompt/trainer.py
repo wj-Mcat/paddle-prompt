@@ -157,7 +157,6 @@ class Trainer:
         for batch in dataloader:
             input_ids, _, prediction_mask, mask_label_ids, labels = batch
             
-
             with paddle.amp.auto_cast(
                     self.config.use_amp,
                     custom_white_list=["layer_norm", "softmax", "gelu"], ):
@@ -218,11 +217,8 @@ class Trainer:
         self.train_bar.update()
 
         # 2. compute acc on training dataset
-        # train_acc = num(paddle.mean(self.metric.compute(self.context_data.logits, self.context_data.labels)))
-        train_acc = 0
-        self.context_data.train_acc = train_acc
         self.writer.add_scalar('train-loss', step=self.context_data.train_step, value=self.context_data.loss)
-        self.writer.add_scalar('train-acc', step=self.context_data.train_step, value=train_acc)
+        self.writer.add_scalar('train-acc', step=self.context_data.train_step, value=self.context_data.train_acc)
         self._update_bar_info()
 
         # 3. step the grad 
@@ -233,9 +229,6 @@ class Trainer:
         # 4. eval on dev dataset
         if self.context_data.train_step % self.config.valid_steps == 0:
             self.evalute(self.dev_dataloader)
-        
-        # 5. save checkpoint
-        if self.context_data.train_step % self.config.valid_steps == 0:
             logger.info(f'saving the model state dict in step: {self.context_data.train_step} ...')
             last_model_file = os.path.join(self.config.output_dir, 'last.pdparams')
             paddle.save(self.model.state_dict(), last_model_file)
@@ -261,6 +254,7 @@ class Trainer:
                     predict_mask=prediction_mask
                 )
                 loss = compute_mask_label_logits(logits, mask_label_ids).mean()
+                acc = 
                 self.context_data.logits = logits
                 self.context_data.loss = loss
                 self.context_data.labels = labels

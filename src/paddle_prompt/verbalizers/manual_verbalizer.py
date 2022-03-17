@@ -28,13 +28,16 @@ class ManualVerbalizer(Verbalizer):
     ) -> None:
         assert isinstance(label_map, OrderedDict), 'label_map object must be OrderedDict'
 
+        # TODO: handle the prefix and find related paper
         self.add_prefix(label_map, prefix)
         super().__init__(tokenizer, label_map)
         self.generate_parameters()
         self.config = config 
         
     def add_prefix(self, label_map: Dict[str, Union[str, List[str]]], prefix: str):
-        r"""Add prefix to label words. For example, if a label words is in the middle of a template,
+        r"""
+        TODO: add related papers at here
+        Add prefix to label words. For example, if a label words is in the middle of a template,
         the prefix should be ``' '``.
 
         Args:
@@ -54,8 +57,9 @@ class ManualVerbalizer(Verbalizer):
                 )
         
     def generate_parameters(self):
-        r"""In basic manual template, the parameters are generated from label words directly.
-        In this implementation, the label_words should not be tokenized into more than one token. 
+        r"""
+        TODO: make this function more readable
+        generate the related token ids in label, so it can compute the loss & predict the label based on it.
         """
         # 获取每个word的最大长度
         max_len  = max([max([len(word_ids) for word_ids in words_ids]) for words_ids in self.label_words_ids_dict.values()])
