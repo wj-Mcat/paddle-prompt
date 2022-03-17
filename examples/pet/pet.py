@@ -17,7 +17,6 @@ def main():
     # 1. load base configuration
     config: Config = Config().parse_args(known_only=True)
     config.device = 'cpu'
-    config.epochs = 1
     config.do_train = False
     
     processor = TNewsDataProcessor(

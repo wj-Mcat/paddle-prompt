@@ -183,7 +183,6 @@ class Trainer:
             
             bar.update()
             bar.set_description('loss: %.5f \t acc: %.5f' % (loss, sub_acc))
-            break
 
         # 2. compute the metric
         assert len(pre_label_ids) == len(truth_label_ids)
