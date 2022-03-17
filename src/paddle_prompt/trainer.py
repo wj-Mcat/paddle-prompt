@@ -58,6 +58,7 @@ class ContextContainer(dict):
         self.dev_acc: float = 0
 
         self.loss = None
+        self.dev_loss = None
         self.logits = None
         self.labels = None
 
@@ -149,10 +150,13 @@ class Trainer:
         self.metric.reset()
 
         # 1. predict the labels based on dataloader
+        all_loss = 0
         pre_label_ids, truth_label_ids = [], []
+        
+        bar = tqdm(total=len(dataloader))
         for batch in dataloader:
             input_ids, _, prediction_mask, mask_label_ids, labels = batch
-            truth_label_ids.extend(labels.numpy().tolist())
+            
 
             with paddle.amp.auto_cast(
                     self.config.use_amp,
@@ -161,26 +165,38 @@ class Trainer:
                     input_ids=input_ids, 
                     predict_mask=prediction_mask
                 )
-                loss = compute_mask_label_logits(logits, mask_label_ids).mean()
-                loss = self.criterion(logits, mask_label_ids)
-            # [batch_size, label_num]
-            label_logits: Tensor = self.verbalizer.process_logits(logits)
-
+                batch_size, vocab_size = len(input_ids), logits.shape[-1]
+                # [batch_size, label_num]
+                label_logits = self.verbalizer.process_logits(
+                    paddle.reshape(logits, shape=(batch_size, -1, vocab_size))
+                )
+                loss = self.criterion(logits, mask_label_ids).detach().numpy().item()
+                all_loss += loss
+                
             # Get max probs label's index
-            y_pred_index = label_logits.argmax(axis=-1)
-            pre_label_ids.extend(y_pred_index.numpy().tolist()) 
+            y_pred_index = label_logits.argmax(axis=-1).detach().numpy().tolist()
+            pre_label_ids.extend(y_pred_index) 
+            labels = labels.detach().numpy().tolist()
+            truth_label_ids.extend(labels)
+
+            sub_acc = sum([y_pred_index[index] == labels[index] for index in range(len(labels))]) / len(labels)
+            
+            bar.update()
+            bar.set_description('loss: %.5f \t acc: %.5f' % (loss, sub_acc))
+            break
 
         # 2. compute the metric
         assert len(pre_label_ids) == len(truth_label_ids)
         acc = sum([pre_label_ids[index] == truth_label_ids for index in range(len(pre_label_ids))]) / len(pre_label_ids)
         self.context_data.dev_acc = acc
+        self.context_data.dev_loss = all_loss
 
-        logger.info("eval accuracy: %.5f" % acc)
+        logger.info("eval accuracy: %.5f \t loss: %.5f" % (acc, all_loss))
 
         self.model.train()
         self.metric.reset()
 
-        self.context_data.eval_step += 1
+        self.context_data.dev_step += 1
         self.writer.add_scalar(tag='eval-acc', value=acc, step=self.context_data.dev_step)
 
         if acc > self.context_data.dev_step:

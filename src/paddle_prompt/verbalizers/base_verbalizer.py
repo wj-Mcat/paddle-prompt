@@ -25,14 +25,13 @@ class Verbalizer:
         self.tokenizer = tokenizer
         self.label_map = label_map
 
-        self.label_words_ids: Dict[str, List[List[int]]] = OrderedDict()
+        self.label_words_ids_dict: Dict[str, List[List[int]]] = OrderedDict()
         
         label_words_ids_tensor = []
         for label, words in label_map.items():
-            self.label_words_ids[label] = self._map_label_words_to_label_ids(words)
-            label_words_ids_tensor.append(self.label_words_ids[label])
+            self.label_words_ids_dict[label] = self._map_label_words_to_label_ids(words)
+            label_words_ids_tensor.append(self.label_words_ids_dict[label])
         
-        self.label_words_ids_tensor = paddle.to_tensor(label_words_ids_tensor)
         self.multi_token_handler = multi_token_handler
     
     def _map_label_words_to_label_ids(self, words: Union[str, List[str]]) -> List[List[int]]:

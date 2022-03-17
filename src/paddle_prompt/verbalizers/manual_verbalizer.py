@@ -58,16 +58,16 @@ class ManualVerbalizer(Verbalizer):
         In this implementation, the label_words should not be tokenized into more than one token. 
         """
         # 获取每个word的最大长度
-        max_len  = max([max([len(word_ids) for word_ids in words_ids]) for words_ids in self.label_words_ids.values()])
+        max_len  = max([max([len(word_ids) for word_ids in words_ids]) for words_ids in self.label_words_ids_dict.values()])
         # 获取每个标签下单词数量的最大长度
-        max_num_label_words = max([len(words_ids) for words_ids in self.label_words_ids.values()])                
+        max_num_label_words = max([len(words_ids) for words_ids in self.label_words_ids_dict.values()])                
         words_ids_mask = [[[1]*len(word_ids) + [0]*(max_len-len(word_ids)) for word_ids in words_ids]
                              + [[0]*max_len]*(max_num_label_words-len(words_ids)) 
-                             for words_ids in self.label_words_ids.values()]
+                             for words_ids in self.label_words_ids_dict.values()]
     
         words_ids = [[word_ids + [0]*(max_len-len(word_ids)) for word_ids in words_ids]
                              + [[0]*max_len]*(max_num_label_words-len(words_ids)) 
-                             for words_ids in self.label_words_ids.values()]
+                             for words_ids in self.label_words_ids_dict.values()]
 
         words_ids = np.array(words_ids)
         words_ids_mask = np.array(words_ids_mask)
@@ -103,10 +103,12 @@ class ManualVerbalizer(Verbalizer):
         logits: Tensor,
     ) -> Tensor:
         r"""
+        logits: [batch_size, max_token_num, vocab_size]
         """
+        batch_size, max_token_num = len(logits), self.config.max_token_num
+
         # 1. create the label mask
-        label_words_logits = paddle.ones(shape=(self.config.batch_size, -1))
-        max_token_num = label_words_logits.shape[-1]
+        label_words_logits = paddle.ones(shape=(batch_size, len(self.label_words_ids)))
         
         # 2. compute the join distribution of labels
         for index in range(max_token_num):
@@ -142,6 +144,7 @@ class ManualVerbalizer(Verbalizer):
         """
         # project logits to the label space
         label_words_logits = self.project(logits, **kwargs)
+        return label_words_logits
         
         if self.post_log_softmax:
             # normalize
