@@ -14,7 +14,7 @@ def debug_pet():
     processor = TNewsDataProcessor(data_dir=os.path.join(root_dir, 'glue_data/tnews'))
     tokenizer = ErnieTokenizer.from_pretrained(config.pretrained_model)
     classifier = ErnieForMLM(config)
-    trainer = Trainer(config=config, processor=processor, classifier=classifier, tokenizer=tokenizer)
+    trainer = Trainer(config=config, processor=processor, mlm=classifier, tokenizer=tokenizer)
     trainer.train()
 
 debug_pet()

@@ -31,12 +31,13 @@ from visualdl import LogWriter
 
 from tqdm import tqdm
 from paddle_prompt.data.schema import InputExample, InputFeature
-from paddle_prompt.config import Config
+from paddle_prompt.config import Config, Tensor
 from paddle_prompt.processors.base_processor import DataProcessor
 from paddle_prompt.data.utils import create_dataloader, extract_and_stack_by_fields, num
 from paddle_prompt.plms.ernie import ErnieMLMCriterion
-from paddle_prompt.templates.manual_template import ManualTemplate
+from paddle_prompt.templates.base_template import Template
 from paddle_prompt.verbalizers import compute_mask_label_logits
+from paddle_prompt.verbalizers.base_verbalizer import Verbalizer
 
 
 def set_seed(seed):
@@ -50,13 +51,14 @@ class ContextContainer(dict):
     
     def __init__(self) -> None:
         self.train_step: int = 0
-        self.eval_step: int = 0
+        self.dev_step: int = 0
         self.epoch: int = 0
 
         self.train_acc: float = None
-        self.eval_acc: float = 0
+        self.dev_acc: float = 0
 
         self.loss = None
+        self.dev_loss = None
         self.logits = None
         self.labels = None
 
@@ -70,7 +72,7 @@ class ContextContainer(dict):
 
 
 class Trainer:
-    def __init__(self, config: Config, processor: DataProcessor, classifier: PretrainedModel, tokenizer: PretrainedTokenizer) -> None:
+    def __init__(self, config: Config, processor: DataProcessor, tokenizer: PretrainedTokenizer, mlm: PretrainedModel, criterion: Layer, template: Template, verbalizer: Verbalizer) -> None:
         self.config = config
         self.set_device()
 
@@ -96,7 +98,7 @@ class Trainer:
         )
 
         # 3. init model related
-        self.model = classifier
+        self.model = mlm
         self.lr_scheduler: LRScheduler = LinearDecayWithWarmup(
             config.learning_rate, 
             total_steps=len(self.train_dataloader) * config.epochs,
@@ -105,6 +107,8 @@ class Trainer:
         if config.init_from_ckpt and os.path.isfile(config.init_from_ckpt):
             state_dict = paddle.load(config.init_from_ckpt)
             self.model.set_dict(state_dict)
+
+        self.tokenizer = tokenizer
         # Generate parameter names needed to perform weight decay.
         # All bias and LayerNorm parameters are excluded.
 
@@ -118,7 +122,7 @@ class Trainer:
             weight_decay=config.weight_decay,
             apply_decay_param_fun=lambda x: x in decay_params)
 
-        self.criterion = ErnieMLMCriterion()
+        self.criterion = criterion
 
         self.metric: Metric = paddle.metric.Accuracy()
 
@@ -126,7 +130,8 @@ class Trainer:
         self._init_output_dir()
         self.writer: LogWriter = LogWriter(logdir=config.output_dir)
 
-        self.template = ManualTemplate(tokenizer, config)
+        self.template: Template = template 
+        self.verbalizer: Verbalizer = verbalizer
 
     def _init_output_dir(self):
         if os.path.exists(self.config.output_dir):
@@ -141,30 +146,60 @@ class Trainer:
     @paddle.no_grad()
     def evalute(self, dataloader: DataLoader, mode: str = 'dev'):
         logger.success(f'{mode} stage ...')
-
         self.model.eval()
         self.metric.reset()
-        losses = []
-        for batch in dataloader:
-            input_ids, token_type_ids, labels = batch
-            logits = self.model(input_ids, token_type_ids)
-            loss = self.criterion(logits, labels)
-            losses.append(num(loss))
-            correct = self.metric.compute(logits, labels)
-            self.metric.update(correct)
-        accu = self.metric.accumulate()
-        self.context_data.eval_acc = accu
 
-        logger.info("eval loss: %.5f, accuracy: %.5f" % (np.mean(losses), accu))
+        # 1. predict the labels based on dataloader
+        all_loss = 0
+        pre_label_ids, truth_label_ids = [], []
+        
+        bar = tqdm(total=len(dataloader))
+        for batch in dataloader:
+            input_ids, _, prediction_mask, mask_label_ids, labels = batch
+            
+
+            with paddle.amp.auto_cast(
+                    self.config.use_amp,
+                    custom_white_list=["layer_norm", "softmax", "gelu"], ):
+                logits: Tensor = self.model(
+                    input_ids=input_ids, 
+                    predict_mask=prediction_mask
+                )
+                batch_size, vocab_size = len(input_ids), logits.shape[-1]
+                # [batch_size, label_num]
+                label_logits = self.verbalizer.process_logits(
+                    paddle.reshape(logits, shape=(batch_size, -1, vocab_size))
+                )
+                loss = self.criterion(logits, mask_label_ids).detach().numpy().item()
+                all_loss += loss
+                
+            # Get max probs label's index
+            y_pred_index = label_logits.argmax(axis=-1).detach().numpy().tolist()
+            pre_label_ids.extend(y_pred_index) 
+            labels = labels.detach().numpy().tolist()
+            truth_label_ids.extend(labels)
+
+            sub_acc = sum([y_pred_index[index] == labels[index] for index in range(len(labels))]) / len(labels)
+            
+            bar.update()
+            bar.set_description('loss: %.5f \t acc: %.5f' % (loss, sub_acc))
+
+        # 2. compute the metric
+        assert len(pre_label_ids) == len(truth_label_ids)
+        acc = sum([pre_label_ids[index] == truth_label_ids for index in range(len(pre_label_ids))]) / len(pre_label_ids)
+        self.context_data.dev_acc = acc
+        self.context_data.dev_loss = all_loss
+
+        logger.info("eval accuracy: %.5f \t loss: %.5f" % (acc, all_loss))
+
         self.model.train()
         self.metric.reset()
 
-        self.context_data.eval_step += 1
-        self.writer.add_scalar(tag='eval-acc', value=accu, step=self.context_data.eval_step)
-        self.writer.add_scalar(tag='eval-loss', value=np.sum(losses), step=self.context_data.eval_step)
+        self.context_data.dev_step += 1
+        self.writer.add_scalar(tag='eval-acc', value=acc, step=self.context_data.dev_step)
 
-        if accu > self.context_data.eval_acc:
-            self.context_data.eval_acc = accu
+        if acc > self.context_data.dev_step:
+            self.context_data.dev_acc = acc
             logger.success(f'saving the best model ...')
             best_model_file = os.path.join(self.config.output_dir, 'best.pdparams')
             paddle.save(self.model.state_dict(), best_model_file)
@@ -173,7 +208,7 @@ class Trainer:
         bar_info = []
         bar_info.append('train-loss: %.4f' % num(self.context_data.loss))
         bar_info.append('train-acc: %.4f' % self.context_data.train_acc)
-        bar_info.append('eval-acc: %.4f' % self.context_data.eval_acc)
+        bar_info.append('dev-acc: %.4f' % self.context_data.dev_acc)
 
         self.train_bar.set_description('\t'.join(bar_info))
 
@@ -211,11 +246,10 @@ class Trainer:
     def train_epoch(self, epoch: int):
         self.model.train()
         logger.info(f'training epoch<{epoch}> ...')
-
         self.train_bar = tqdm(total=len(self.train_dataloader))
 
-        for step, batch in enumerate(self.train_dataloader, start=1):
-            input_ids, token_type_ids, prediction_mask, mask_label_ids, labels = batch
+        for batch in self.train_dataloader:
+            input_ids, _, prediction_mask, mask_label_ids, labels = batch
 
             self.on_batch_start()
 
@@ -236,8 +270,11 @@ class Trainer:
 
     def train(self):
         for epoch in range(1, self.config.epochs + 1):
-            self.train_epoch(epoch)
-            self.evalute(self.test_dataloader, mode='test')
+            if self.config.do_train:
+                self.train_epoch(epoch)
+
+            if self.config.do_dev:
+                self.evalute(self.test_dataloader, mode='test')
     
     def predict(self):
         pass

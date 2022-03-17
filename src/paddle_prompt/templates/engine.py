@@ -33,6 +33,18 @@ class Engine(ABC):
     
         return cls(label_template)
 
+    @abstractmethod    
+    def _check_template_format(self, text: str) -> bool:
+        """check if the template is valid for rendering, but this dependes on the render engine
+
+        Args:
+            text (str): the source of the sentence
+
+        Returns:
+            bool: if the template is valid
+        """
+        raise NotImplementedError
+
 
 class JinjaEngine(Engine):
     def __init__(self, label_templates: Dict[str, str]) -> None:
@@ -49,3 +61,16 @@ class JinjaEngine(Engine):
 
         template: Jinja2Template = self._label_jinja2_template[example.label]
         return template.render(example.to_dict())
+    
+    def _check_template_format(self, text: str) ->bool:
+        """check if the template is valid
+        TODO: use the jinja2 method handle checking
+
+        Args:
+            text (str): the source of the template string 
+
+        Returns:
+            bool: the result validation of the template 
+        """
+        # TODO: to be fixed later
+        return True

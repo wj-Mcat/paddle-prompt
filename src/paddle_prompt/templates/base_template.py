@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from distutils.command.config import config
 import json
-from typing import Dict, List, Optional
+from collections import OrderedDict
+from typing import Dict, List, Optional, Union
 from copy import deepcopy
 from matplotlib.pyplot import text
 import numpy as np
@@ -22,13 +23,27 @@ def _resize_prediction_mask(text: str, label_size: int) -> str:
     mask_str = '[MASK]'
     return text.replace(mask_str, ''.join([mask_str] * label_size))
 
-def _load_label2words(file: str) -> Dict[str, str]:
-    label2words = {}
+
+def _load_label2words(file: str) -> Dict[str, List[str]]:
+    label2words = OrderedDict()
     with open(file, 'r', encoding='utf-8') as f:
         data = json.load(f)
         for label, label_obj in data.items():
-            label2words[label] = label_obj['labels'][0]
+            label2words[label] = label_obj['labels']
     return label2words
+
+
+class SoftMixin:
+    def soft_token_ids(self) -> List[int]:
+        """
+        This function identifies which tokens are soft tokens.
+
+        Sometimes tokens in the template are not from the vocabulary, 
+        but a sequence of soft tokens.
+        In this case, you need to implement this function
+        """
+        raise NotImplementedError
+    
 
 class Template(nn.Layer, ABC):
     """
@@ -39,7 +54,6 @@ class Template(nn.Layer, ABC):
         self,
         tokenizer: PretrainedTokenizer,
         config: Config,
-        
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -47,7 +61,7 @@ class Template(nn.Layer, ABC):
         self.render_engine = JinjaEngine.from_file(config.template_file)
         self.tokenizer: PretrainedTokenizer = tokenizer
         self.config: Config = config
-        self.label2words = _load_label2words(config.template_file)
+        self.label2words: Dict[str, List[str]] = _load_label2words(config.template_file)
 
     def wrap_examples(self, examples: List[InputExample], label2idx: Dict[str, int] = None):
         if not label2idx:
@@ -55,7 +69,7 @@ class Template(nn.Layer, ABC):
 
         # 1. construct text or text pair dataset
         texts = [self.render_engine.render(example) for example in examples] 
-        texts = [_resize_prediction_mask(text, self.config.label_size) for text in texts]
+        texts = [_resize_prediction_mask(text, self.config.max_token_num) for text in texts]
         encoded_features = self.tokenizer.batch_encode(
             texts,
             max_seq_len=self.config.max_seq_length,
@@ -94,7 +108,8 @@ class Template(nn.Layer, ABC):
         for example in examples:
             mask_label_ids.extend(
                 self.tokenizer.convert_tokens_to_ids(
-                    list(self.label2words[example.label])
+                    # TODO: to handle the multiple words?
+                    list(self.label2words[example.label][0])
                 )
             )
         features.append(np.array(mask_label_ids))
@@ -104,8 +119,6 @@ class Template(nn.Layer, ABC):
             np.array(label_ids)
         )
         return features
-
-    
 
     def wrap_feature(self, feature: InputFeature) -> InputFeature:
         pass
