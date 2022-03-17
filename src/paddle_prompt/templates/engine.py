@@ -6,7 +6,7 @@ import os
 from typing import Dict
 from jinja2 import Template as Jinja2Template
 
-from paddle_prompt.data.schema import InputExample
+from paddle_prompt.schema import InputExample
 
 
 class Engine(ABC):

@@ -8,7 +8,7 @@ from matplotlib.pyplot import text
 
 from paddlenlp.datasets import load_dataset
 
-from paddle_prompt.data.schema import InputExample, ExampleDataset
+from paddle_prompt.schema import InputExample, ExampleDataset
 from paddle_prompt.processors.base_processor import DataProcessor
 
     

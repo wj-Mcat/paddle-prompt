@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Union
 import paddle
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 from paddle_prompt.config import Tensor
-from paddle_prompt.data.schema import InputFeature
+from paddle_prompt.schema import InputFeature
 
 
 class TokenHandler(Enum):

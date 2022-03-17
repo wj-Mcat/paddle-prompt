@@ -42,6 +42,6 @@ Made with [contrib.rocks](https://contrib.rocks)
 
 ## Copyright & License
 
-- Code & Docs © 2022 wj-MCat <https://github.com/wj-Mcat>
+- Code & Docs © 2022 wj-Mcat <https://github.com/wj-Mcat>
 - Code released under the Apache-2.0 License
 - Docs released under Creative Commons

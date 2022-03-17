@@ -30,10 +30,10 @@ from loguru import logger
 from visualdl import LogWriter
 
 from tqdm import tqdm
-from paddle_prompt.data.schema import InputExample, InputFeature
+from paddle_prompt.schema import InputExample, InputFeature
 from paddle_prompt.config import Config, Tensor
 from paddle_prompt.processors.base_processor import DataProcessor
-from paddle_prompt.data.utils import create_dataloader, extract_and_stack_by_fields, num
+from paddle_prompt.utils import create_dataloader, extract_and_stack_by_fields, num
 from paddle_prompt.plms.ernie import ErnieMLMCriterion
 from paddle_prompt.templates.base_template import Template
 from paddle_prompt.verbalizers import compute_mask_label_logits

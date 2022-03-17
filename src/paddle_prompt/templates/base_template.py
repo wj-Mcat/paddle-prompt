@@ -13,11 +13,11 @@ from paddle import nn
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 from paddlenlp.transformers.model_utils import PretrainedModel
 
-from paddle_prompt.data.schema import InputExample, InputFeature
+from paddle_prompt.schema import InputExample, InputFeature
 from paddle_prompt.models.utils import freeze_module
 from paddle_prompt.templates.engine import Engine, JinjaEngine
 from paddle_prompt.config import Config
-from paddle_prompt.data.utils import extract_and_stack_by_fields
+from paddle_prompt.utils import extract_and_stack_by_fields
 
 def _resize_prediction_mask(text: str, label_size: int) -> str:
     mask_str = '[MASK]'

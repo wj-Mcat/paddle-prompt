@@ -11,7 +11,7 @@ import numpy as np
 
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 from paddle_prompt.config import Tensor
-from paddle_prompt.data.schema import InputFeature
+from paddle_prompt.schema import InputFeature
 
 from paddle_prompt.config import Tensor, Config
 from paddle_prompt.verbalizers.base_verbalizer import Verbalizer

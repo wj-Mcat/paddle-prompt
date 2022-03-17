@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List
 
 from abc import ABC
-from paddle_prompt.data.schema import ExampleDataset
+from paddle_prompt.schema import ExampleDataset
 
 
 class DataProcessor(ABC):
