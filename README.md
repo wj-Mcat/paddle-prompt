@@ -28,13 +28,12 @@ pip install paddle-prompt
 
 > 在接下来一段时间内，使用本工具可复现以下论文，如果大家想要复现其它论文，欢迎发Issue和Contribution。
 
-- [x] [PET: ](https://arxiv.org/abs/2001.07676)
-- [ ] [P-Tuning](https://arxiv.org/pdf/2103.10385.pdf)
-- [ ] [P-Tuning V2]()
+- [x] [PET: Exploiting Cloze Questions for Few Shot Text Classification and Natural Language Inference](https://arxiv.org/abs/2001.07676)
+- [ ] [P-Tuning: GPT Understands, Too](https://arxiv.org/pdf/2103.10385.pdf)
+- [ ] [P-Tuning v2: Prompt Tuning Can Be Comparable to Fine-tuning Universally Across Scales and Tasks](https://arxiv.org/abs/2110.07602)
 - [ ] [LM-BFF: Better Few-shot Fine-tuning of Language Models](https://arxiv.org/pdf/2012.15723.pdf)
-    - refer to: https://github.com/princeton-nlp/LM-BFF
 - [ ] [Entailment as Few-Shot Learner](https://arxiv.org/abs/2104.14690)
-- [ ] ...... 等待各位大佬的Contribution
+- [ ] ...... more contribution
 
 
 ## Stargazers over time
