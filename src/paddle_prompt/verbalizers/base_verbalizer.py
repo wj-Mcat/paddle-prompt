@@ -3,11 +3,14 @@ from abc import abstractmethod
 from collections import OrderedDict
 from enum import Enum
 from typing import Any, Dict, List, Union
+from dataclasses_json import config
 
 import paddle
+from paddle.metric import Metric
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
-from paddle_prompt.config import Tensor
+from paddle_prompt.config import Tensor, Config
 from paddle_prompt.schema import InputFeature
+from paddle_prompt.utils import get_metric, to_list
 
 
 class TokenHandler(Enum):
@@ -20,7 +23,8 @@ class Verbalizer:
         self,
         tokenizer: PretrainedTokenizer,
         label_map: Dict[str, Union[str, List[str]]],
-        multi_token_handler: TokenHandler = TokenHandler.mean
+        config: Config,
+        multi_token_handler: TokenHandler = TokenHandler.mean,
     ) -> None:
         self.tokenizer = tokenizer
         self.label_map = label_map
@@ -33,6 +37,7 @@ class Verbalizer:
             label_words_ids_tensor.append(self.label_words_ids_dict[label])
         
         self.multi_token_handler = multi_token_handler
+        self.config = config
     
     def _map_label_words_to_label_ids(self, words: Union[str, List[str]]) -> List[List[int]]:
         if isinstance(words, str):
@@ -47,6 +52,20 @@ class Verbalizer:
             # in paddlenlp, there always special token in the sentence, so we should remove it
             label_ids.append(encoded_features['input_ids'][1: -1])
         return label_ids
+
+    @abstractmethod    
+    def project(self, mask_label_logits: Tensor) -> Tensor:
+        """project mask label logits to label distribution
+
+        Args:
+            mask_label_logits (Tensor): the output mask label logit from PLM 
+                shape: [batch_size, max_token_num, vocab_size]
+
+        Returns:
+            Tensor: the mask label distribution 
+                shape: [batch_size, label_num]
+        """
+        raise NotImplementedError
 
     def process_outputs(self,
                        outputs: Tensor,
@@ -142,14 +161,25 @@ class Verbalizer:
         label_words_probs = label_words_probs.reshape(*shape)
         return label_words_probs
     
-    def compute_acc(self, logits: Tensor, label_ids: Tensor) -> float:
+    def compute_metric(self, mask_label_logits: Tensor, label_ids: Tensor, metric_name: str = 'acc') -> float:
         """compute the acc based on the logits and label_ids
 
         Args:
-            logits (Tensor): the logits from the PLM
+            mask_label_logits (Tensor): the logits from the PLM
+                [batch_size, max_token_num, vocab_size]
             label_ids (Tensor): the golden truth of label ids
+                [batch_size, max_token_num]
 
         Returns:
             float: the final label_ids
         """
+        assert len(mask_label_logits) == 3, 'the shape mask_label_logits should be 3-dim'
+
+        label_logits = self.project(mask_label_logits)
+        metric: Metric = get_metric(self.config.metric_name)
+        metric.update(label_logits, label_ids)
+        
+        return metric.accumulate()
+        
+
         

@@ -1,9 +1,10 @@
-from collections import defaultdict
-from dataclasses import Field
+from dataclasses import dataclass
 import os
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from tap import Tap
-import paddle.tensor as Tensor
+from sklearn.metrics import recall_score, accuracy_score, precision_score, f1_score
+from paddle_prompt.utils import to_list
+from tabulate import tabulate
 
 class TrainConfigMixin(Tap):
     """Train Config Mixin"""
@@ -13,7 +14,6 @@ class TrainConfigMixin(Tap):
     warmup_proportion: float = 0.0      # Linear warmup proption over the training process.
 
     valid_steps: int = 100              # The interval steps to evaluate model performance.
-    save_steps: int = 100               # The interval steps to save checkppoints.
 
     init_from_ckpt: Optional[str] = None# The path of checkpoint to be loaded.
 
@@ -44,7 +44,11 @@ class TemplateConfigMixin(Tap):
     template_file: str = './glue_data/tnews/manual_template.json'
 
 
-class Config(TrainConfigMixin, TemplateConfigMixin):
+class VerbalizerConfigMixin(Tap):
+    metric_name: str = 'acc'         # the name of metric
+
+
+class Config(TrainConfigMixin, TemplateConfigMixin, VerbalizerConfigMixin):
     def __init__(self, file: str = None, **kwargs):
         if file and os.path.exists(file):
             file = [file]
@@ -58,3 +62,44 @@ class Config(TrainConfigMixin, TemplateConfigMixin):
     task: str = 'tnews'                     # Dataset for classfication tasks.
     max_seq_length: int = 128               # The maximum total input sequence length after tokenization. Sequences longer than this will be truncated, sequences shorter will be padded.
     template: str = 'manual_template_0.json'# the file name of template file
+
+
+@dataclass
+class MetricReport:
+    acc: float = 0
+    precision: float = 0
+    recall: float = 0
+    f1_score: float = 0
+    micro_f1_score: float = 0
+    macro_f1_score: float = 0
+
+    @staticmethod
+    def from_sequence(truth: List, predicted: List):
+        predicted, truth = to_list(predicted), to_list(truth)
+        metric = dict(
+            acc=accuracy_score(truth, predicted),
+            precision=precision_score(truth, predicted),
+            recall=recall_score(truth, predicted),
+            f1_score=f1_score(truth, predicted),
+            micro_f1_score=f1_score(truth, predicted, average='micro'),
+            macro_f1_score=f1_score(truth, predicted, average='macro'),
+        )
+        return MetricReport(**metric)
+    
+    def __str__(self) -> str:
+        """get the string format of the metric report
+        """
+        return 'acc: %.5f \t precision: %.5f \t  recall: %.5f \t  f1_score: %.5f \t  micro_f1_score: %.5f \t  macro_f1_score: %.5f \t ' % (self.acc, self.precision, self.recall, self.f1_score, self.micro_f1_score, self.macro_f1_score)
+    
+    def tabulate(self) -> str:
+        """use tabulate to make a great metric format"""
+        headers = ['acc', 'precision', 'reclal', 'f1_score', 'micro_f1_score', 'macro_f1_score']
+        return tabulate(
+            [[
+                self.acc, self.precision, self.recall, self.f1_score, self.micro_f1_score, self.macro_f1_score
+            ]],
+            headers=headers,
+            tablefmt='grid',
+            floatfmt='.4f',
+        )
+        

@@ -6,6 +6,7 @@ import numpy as np
 import paddle
 from paddle.io import Dataset
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
+from paddle.metric import Metric, Accuracy, Precision, Recall
 
 
 def convert_example(example: dict,
@@ -83,3 +84,20 @@ def num(tensor_like):
     if paddle.is_tensor(tensor_like):
         return tensor_like.detach().cpu().numpy().item()
     return tensor_like
+
+
+def to_list(tensor_like):
+    if paddle.is_tensor(tensor_like):
+        return tensor_like.detach().cpu().numpy().tolist()
+    return list(tensor_like)
+
+
+def get_metric(name: str, **kwargs) -> Metric:
+    if name == 'acc':
+        return Accuracy(**kwargs)
+    if name == 'precision':
+        return Precision(**kwargs)
+    if name == 'recall':
+        return Recall(**kwargs)
+
+    raise NotImplementedError
