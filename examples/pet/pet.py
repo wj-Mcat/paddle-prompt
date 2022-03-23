@@ -15,7 +15,6 @@ def main():
     # 1. load base configuration
     config: Config = Config().parse_args(known_only=True)
     config.device = 'cpu'
-    config.do_train = False
     
     processor = TNewsDataProcessor(
         data_dir='./glue_data/tnews'

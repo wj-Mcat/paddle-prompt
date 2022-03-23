@@ -54,13 +54,13 @@ class ContextContainer(dict):
         self.dev_step: int = 0
         self.epoch: int = 0
 
-        self.train_acc: float = None
+        self.train_acc: float = 0 
         self.dev_acc: float = 0
 
-        self.loss = None
-        self.dev_loss = None
-        self.logits = None
-        self.labels = None
+        self.loss = 0 
+        self.dev_loss = 0 
+        self.logits = 0
+        self.labels = 0
 
         self._cache = defaultdict(int) 
 
@@ -254,7 +254,6 @@ class Trainer:
                     predict_mask=prediction_mask
                 )
                 loss = compute_mask_label_logits(logits, mask_label_ids).mean()
-                acc = 
                 self.context_data.logits = logits
                 self.context_data.loss = loss
                 self.context_data.labels = labels

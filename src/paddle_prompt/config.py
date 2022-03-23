@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 from tap import Tap
 from sklearn.metrics import recall_score, accuracy_score, precision_score, f1_score
 from paddle_prompt.utils import to_list
+import paddle.tensor as Tensor
 from tabulate import tabulate
 
 class TrainConfigMixin(Tap):
