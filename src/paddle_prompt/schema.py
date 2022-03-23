@@ -20,14 +20,11 @@ limitations under the License.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
-from dataclasses import dataclass, field
 from collections import OrderedDict
-from anyio import sleep_until
-import numpy as np
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Union
 
-from dataclasses_json import dataclass_json 
-
+from dataclasses_json import dataclass_json
 from paddle.io import Dataset
 
 
@@ -36,12 +33,12 @@ from paddle.io import Dataset
 class InputExample:
     """Input Example Data Structure for training data
     """
-    text: str                                   # source sentence 
-    label: Union[str, List[str]]                # label field
+    text: str  # source sentence
+    label: Union[str, List[str]]  # label field
 
-    guid: Optional[Union[int, str]] = None      # store the union id for example
-    text_pair: Optional[str] = None             # for sentence pair task
-    target_text: Optional[str] = None           # for generation task
+    guid: Optional[Union[int, str]] = None  # store the union id for example
+    text_pair: Optional[str] = None  # for sentence pair task
+    target_text: Optional[str] = None  # for generation task
     meta: Dict[str, Any] = field(default_factory=dict)  # store the meta data of training example
 
     @property
@@ -56,14 +53,14 @@ class ExampleDataset(Dataset):
         super().__init__()
         self.examples: List[InputExample] = examples
         self.label2idx: Dict[str, int] = OrderedDict()
-        
+
         for example in examples:
             if example.label not in self.label2idx:
                 self.label2idx[example.label] = len(self.label2idx)
 
     def __len__(self):
         return len(self.examples)
-    
+
     def __getitem__(self, idx: int):
         return self.examples[idx]
 

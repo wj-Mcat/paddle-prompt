@@ -7,35 +7,26 @@ import os
 import random
 import shutil
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional
-from matplotlib.pyplot import axis
+from typing import Any
+
 import numpy as np
 import paddle
-import paddle.nn.functional as F
-from paddle.metric.metrics import Metric, Accuracy
+from loguru import logger
 from paddle.io import DataLoader
+from paddle.metric.metrics import Metric
+from paddle.nn import Layer
 from paddle.optimizer import Optimizer
 from paddle.optimizer.lr import LRScheduler
-from paddle.nn import Layer
-from paddle.amp.grad_scaler import AmpScaler
-
-
-import paddlenlp as ppnlp
-from paddlenlp.data import Stack, Tuple, Pad
-from paddlenlp.datasets import load_dataset, MapDataset
 from paddlenlp.transformers import LinearDecayWithWarmup
-from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 from paddlenlp.transformers.model_utils import PretrainedModel
-from loguru import logger
+from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
+from tqdm import tqdm
 from visualdl import LogWriter
 
-from tqdm import tqdm
-from paddle_prompt.schema import InputExample, InputFeature
 from paddle_prompt.config import Config, Tensor
 from paddle_prompt.processors.base_processor import DataProcessor
-from paddle_prompt.utils import create_dataloader, extract_and_stack_by_fields, num
-from paddle_prompt.plms.ernie import ErnieMLMCriterion
 from paddle_prompt.templates.base_template import Template
+from paddle_prompt.utils import create_dataloader, num
 from paddle_prompt.verbalizers import compute_mask_label_logits
 from paddle_prompt.verbalizers.base_verbalizer import Verbalizer
 
@@ -48,31 +39,31 @@ def set_seed(seed):
 
 
 class ContextContainer(dict):
-    
     def __init__(self) -> None:
         self.train_step: int = 0
         self.dev_step: int = 0
         self.epoch: int = 0
 
-        self.train_acc: float = 0 
+        self.train_acc: float = 0
         self.dev_acc: float = 0
 
-        self.loss = 0 
-        self.dev_loss = 0 
+        self.loss = 0
+        self.dev_loss = 0
         self.logits = 0
         self.labels = 0
 
-        self._cache = defaultdict(int) 
+        self._cache = defaultdict(int)
 
     def __getitem__(self, key):
-        return self._cache[key] 
+        return self._cache[key]
 
     def __setitem__(self, key: str, value: Any) -> None:
         self._cache[key] = value
 
 
 class Trainer:
-    def __init__(self, config: Config, processor: DataProcessor, tokenizer: PretrainedTokenizer, mlm: PretrainedModel, criterion: Layer, template: Template, verbalizer: Verbalizer) -> None:
+    def __init__(self, config: Config, processor: DataProcessor, tokenizer: PretrainedTokenizer, mlm: PretrainedModel,
+                 criterion: Layer, template: Template, verbalizer: Verbalizer) -> None:
         self.config = config
         self.set_device()
 
@@ -80,7 +71,7 @@ class Trainer:
         self.train_dataset = processor.get_train_dataset()
         self.dev_dataset = processor.get_dev_dataset()
         self.test_dataset = processor.get_test_dataset()
-        
+
         self.train_dataloader = create_dataloader(
             self.train_dataset,
             batch_size=config.batch_size,
@@ -99,8 +90,10 @@ class Trainer:
 
         # 3. init model related
         self.model = mlm
+        self.model.to(device=config.place())
+
         self.lr_scheduler: LRScheduler = LinearDecayWithWarmup(
-            config.learning_rate, 
+            config.learning_rate,
             total_steps=len(self.train_dataloader) * config.epochs,
             warmup=config.warmup_proportion
         )
@@ -130,12 +123,12 @@ class Trainer:
         self._init_output_dir()
         self.writer: LogWriter = LogWriter(logdir=config.output_dir)
 
-        self.template: Template = template 
+        self.template: Template = template
         self.verbalizer: Verbalizer = verbalizer
 
     def _init_output_dir(self):
         if os.path.exists(self.config.output_dir):
-            shutil.rmtree(self.config.output_dir) 
+            shutil.rmtree(self.config.output_dir)
         os.makedirs(self.config.output_dir)
 
     def set_device(self):
@@ -152,16 +145,16 @@ class Trainer:
         # 1. predict the labels based on dataloader
         all_loss = 0
         pre_label_ids, truth_label_ids = [], []
-        
+
         bar = tqdm(total=len(dataloader))
         for batch in dataloader:
             input_ids, _, prediction_mask, mask_label_ids, labels = batch
-            
+
             with paddle.amp.auto_cast(
                     self.config.use_amp,
                     custom_white_list=["layer_norm", "softmax", "gelu"], ):
                 logits: Tensor = self.model(
-                    input_ids=input_ids, 
+                    input_ids=input_ids,
                     predict_mask=prediction_mask
                 )
                 batch_size, vocab_size = len(input_ids), logits.shape[-1]
@@ -171,15 +164,15 @@ class Trainer:
                 )
                 loss = self.criterion(logits, mask_label_ids).detach().numpy().item()
                 all_loss += loss
-                
+
             # Get max probs label's index
             y_pred_index = label_logits.argmax(axis=-1).detach().numpy().tolist()
-            pre_label_ids.extend(y_pred_index) 
+            pre_label_ids.extend(y_pred_index)
             labels = labels.detach().numpy().tolist()
             truth_label_ids.extend(labels)
 
             sub_acc = sum([y_pred_index[index] == labels[index] for index in range(len(labels))]) / len(labels)
-            
+
             bar.update()
             bar.set_description('loss: %.5f \t acc: %.5f' % (loss, sub_acc))
 
@@ -235,7 +228,7 @@ class Trainer:
 
     def on_batch_start(self):
         self.metric.reset()
-    
+
     def train_epoch(self, epoch: int):
         self.model.train()
         logger.info(f'training epoch<{epoch}> ...')
@@ -243,14 +236,13 @@ class Trainer:
 
         for batch in self.train_dataloader:
             input_ids, _, prediction_mask, mask_label_ids, labels = batch
-
             self.on_batch_start()
 
             with paddle.amp.auto_cast(
                     self.config.use_amp,
                     custom_white_list=["layer_norm", "softmax", "gelu"], ):
                 logits = self.model(
-                    input_ids=input_ids, 
+                    input_ids=input_ids,
                     predict_mask=prediction_mask
                 )
                 loss = compute_mask_label_logits(logits, mask_label_ids).mean()
@@ -268,8 +260,6 @@ class Trainer:
 
             if self.config.do_dev:
                 self.evalute(self.test_dataloader, mode='test')
-    
+
     def predict(self):
         pass
-
-    

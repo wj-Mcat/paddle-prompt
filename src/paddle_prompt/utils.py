@@ -8,6 +8,8 @@ from paddle.io import Dataset
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 from paddle.metric import Metric, Accuracy, Precision, Recall
 
+from paddle_prompt.config import Tensor
+
 
 def convert_example(example: dict,
                     tokenizer: PretrainedTokenizer,
@@ -90,6 +92,14 @@ def to_list(tensor_like):
     if paddle.is_tensor(tensor_like):
         return tensor_like.detach().cpu().numpy().tolist()
     return list(tensor_like)
+
+
+def lists_to_tensors(list_features, place=None) -> List[Tensor]:
+    tensors = []
+    kwargs = {'place': place} if place else {}
+    for list_feature in list_features:
+        tensors.append(paddle.to_tensor(list_feature, **kwargs))
+    return tensors
 
 
 def get_metric(name: str, **kwargs) -> Metric:

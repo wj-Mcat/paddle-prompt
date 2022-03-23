@@ -3,4 +3,8 @@ semver
 typed-argument-parser
 numpy
 dataclasses-json
+paddlepaddle
+tqdm
 paddlenlp
+loguru
+visualdl

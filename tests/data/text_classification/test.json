@@ -1,0 +1,7 @@
+{"label": 0, "label_desc": "clock", "sentence": "我要定闹钟叫我起床", "keywords": "", "id": 0}
+{"label": 0, "label_desc": "clock", "sentence": "记得叫我起床", "keywords": "", "id": 1}
+{"label": 1, "label_desc": "greet", "sentence": "你好，你是谁", "keywords": "", "id": 4}
+{"label": 1, "label_desc": "greet", "sentence": "你好", "keywords": "", "id": 5}
+{"label": 2, "label_desc": "weather", "sentence": "我要查一下天气", "keywords": "", "id": 8}
+{"label": 2, "label_desc": "weather", "sentence": "帮我查一下北京的天气", "keywords": "", "id": 9}
+{"label": 2, "label_desc": "weather", "sentence": "北京的天气如何", "keywords": "", "id": 10}

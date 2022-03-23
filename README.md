@@ -17,9 +17,9 @@ pip install paddle-prompt
 
 ## TODOS
 
-- [ ] complete PLMs
+- [x] complete PLMs
 - [ ] complete template
-- [ ] complete verbalizer
+- [ ] complete verbalize
 - [ ] create text classification datasets
 - ...
 

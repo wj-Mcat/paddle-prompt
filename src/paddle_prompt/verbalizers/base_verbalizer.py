@@ -1,16 +1,15 @@
 from __future__ import annotations
+
 from abc import abstractmethod
 from collections import OrderedDict
 from enum import Enum
-from typing import Any, Dict, List, Union
-from dataclasses_json import config
+from typing import Dict, List, Union
 
-import paddle
 from paddle.metric import Metric
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
+
 from paddle_prompt.config import Tensor, Config
-from paddle_prompt.schema import InputFeature
-from paddle_prompt.utils import get_metric, to_list
+from paddle_prompt.utils import get_metric
 
 
 class TokenHandler(Enum):
@@ -18,27 +17,28 @@ class TokenHandler(Enum):
     max: str = 'max'
     mean: str = 'mean'
 
+
 class Verbalizer:
     def __init__(
-        self,
-        tokenizer: PretrainedTokenizer,
-        label_map: Dict[str, Union[str, List[str]]],
-        config: Config,
-        multi_token_handler: TokenHandler = TokenHandler.mean,
+            self,
+            tokenizer: PretrainedTokenizer,
+            label_map: Dict[str, Union[str, List[str]]],
+            config: Config,
+            multi_token_handler: TokenHandler = TokenHandler.mean,
     ) -> None:
         self.tokenizer = tokenizer
         self.label_map = label_map
 
         self.label_words_ids_dict: Dict[str, List[List[int]]] = OrderedDict()
-        
+
         label_words_ids_tensor = []
         for label, words in label_map.items():
             self.label_words_ids_dict[label] = self._map_label_words_to_label_ids(words)
             label_words_ids_tensor.append(self.label_words_ids_dict[label])
-        
+
         self.multi_token_handler = multi_token_handler
         self.config = config
-    
+
     def _map_label_words_to_label_ids(self, words: Union[str, List[str]]) -> List[List[int]]:
         if isinstance(words, str):
             words = [words]
@@ -53,7 +53,7 @@ class Verbalizer:
             label_ids.append(encoded_features['input_ids'][1: -1])
         return label_ids
 
-    @abstractmethod    
+    @abstractmethod
     def project(self, mask_label_logits: Tensor) -> Tensor:
         """project mask label logits to label distribution
 
@@ -68,9 +68,9 @@ class Verbalizer:
         raise NotImplementedError
 
     def process_outputs(self,
-                       outputs: Tensor,
-                       batch,
-                       **kwargs):
+                        outputs: Tensor,
+                        batch,
+                        **kwargs):
         r"""By default, the verbalizer will process the logits of the PLM's 
         output. 
 
@@ -119,14 +119,15 @@ class Verbalizer:
         if self.multi_token_handler == TokenHandler.first:
             label_words_logits = label_words_logits.index_select(axis=-1, index=0)
         elif self.multi_token_handler == TokenHandler.max:
-            label_words_logits = label_words_logits - 1000*(1-mask.unsqueeze(0))
+            label_words_logits = label_words_logits - 1000 * (1 - mask.unsqueeze(0))
             label_words_logits = label_words_logits.max(dim=-1).values
         elif self.multi_token_handler == TokenHandler.mean:
-            label_words_logits = (label_words_logits*mask.unsqueeze(0)).sum(dim=-1)/(mask.unsqueeze(0).sum(dim=-1)+1e-15)
+            label_words_logits = (label_words_logits * mask.unsqueeze(0)).sum(dim=-1) / (
+                        mask.unsqueeze(0).sum(dim=-1) + 1e-15)
         else:
             raise ValueError("multi_token_handler {} not configured".format(self.multi_token_handler))
         return label_words_logits
-    
+
     def aggregate(self, label_words_logits: Tensor) -> Tensor:
         r"""Use weight to aggregate the logits of label words.
 
@@ -136,7 +137,7 @@ class Verbalizer:
         Returns:
             :obj:`torch.Tensor`: The aggregated logits from the label words. 
         """
-        label_words_logits = (label_words_logits * self.label_words_mask).sum(-1)/self.label_words_mask.sum(-1)
+        label_words_logits = (label_words_logits * self.label_words_mask).sum(-1) / self.label_words_mask.sum(-1)
         return label_words_logits
 
     def calibrate(self, label_words_probs: Tensor, **kwargs) -> Tensor:
@@ -149,18 +150,19 @@ class Verbalizer:
             :obj:`torch.Tensor`: The calibrated probability of label words.
         """
         shape = label_words_probs.shape
-        assert self._calibrate_logits.dim() ==  1, "self._calibrate_logits are not 1-d tensor"
+        assert self._calibrate_logits.dim() == 1, "self._calibrate_logits are not 1-d tensor"
         calibrate_label_words_probs = self.normalize(self.project(self._calibrate_logits.unsqueeze(0), **kwargs))
         assert calibrate_label_words_probs.shape[1:] == label_words_probs.shape[1:] \
-             and calibrate_label_words_probs.shape[0]==1, "shape not match"
-        label_words_probs /= (calibrate_label_words_probs+1e-15)
+               and calibrate_label_words_probs.shape[0] == 1, "shape not match"
+        label_words_probs /= (calibrate_label_words_probs + 1e-15)
 
         # normalize # TODO Test the performance
-        norm = label_words_probs.reshape(shape[0], -1).sum(dim=-1,keepdim=True) # TODO Test the performance of detaching()
+        norm = label_words_probs.reshape(shape[0], -1).sum(dim=-1,
+                                                           keepdim=True)  # TODO Test the performance of detaching()
         label_words_probs = label_words_probs.reshape(shape[0], -1) / norm
         label_words_probs = label_words_probs.reshape(*shape)
         return label_words_probs
-    
+
     def compute_metric(self, mask_label_logits: Tensor, label_ids: Tensor, metric_name: str = 'acc') -> float:
         """compute the acc based on the logits and label_ids
 
@@ -178,8 +180,5 @@ class Verbalizer:
         label_logits = self.project(mask_label_logits)
         metric: Metric = get_metric(self.config.metric_name)
         metric.update(label_logits, label_ids)
-        
-        return metric.accumulate()
-        
 
-        
+        return metric.accumulate()

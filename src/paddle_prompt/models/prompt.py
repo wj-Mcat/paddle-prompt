@@ -22,20 +22,15 @@ from __future__ import annotations
 
 from typing import Union
 
-import paddle
 from paddle import nn
 
-from .utils import 
 
 
 class Prompt(nn.Layer):
     def __init__(
-        self,
-        plm: Union[str, nn.Layer],
-        freeze: bool = False,
-        **kwargs
+            self,
+            plm: Union[str, nn.Layer],
+            freeze: bool = False,
+            **kwargs
     ):
         super().__init__(**kwargs)
-        
-        
-        
