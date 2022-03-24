@@ -1,12 +1,14 @@
 """Base Data Processors"""
 from __future__ import annotations
-from typing import Dict, Optional, List
+from ctypes import Union
+from typing import Dict, List, Any
 
 import numpy as np
 import paddle
 from paddle.io import Dataset
-from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 from paddle.metric import Metric, Accuracy, Precision, Recall
+
+from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 
 from paddle_prompt.config import Tensor
 
@@ -35,7 +37,7 @@ def convert_example(example: dict,
     token_type_ids = encoded_inputs["token_type_ids"]
     if mode == 'test':
         return input_ids, token_type_ids
-    
+
     label_id = label2idx[example['label']]
     label = np.array([label_id], dtype="int64")
     return input_ids, token_type_ids, label
@@ -44,8 +46,8 @@ def convert_example(example: dict,
 def create_dataloader(dataset: Dataset,
                       mode: str = 'train',
                       batch_size: int = 16,
-                      collate_fn = None,
-                      trans_fn = None):
+                      collate_fn=None,
+                      trans_fn=None):
     """create dataloader based on dataset
 
     Args:
@@ -73,28 +75,67 @@ def create_dataloader(dataset: Dataset,
     )
 
 
-def extract_and_stack_by_fields(encoded_features: List[dict], fields: List[str]) -> set:
+def extract_and_stack_by_fields(
+    encoded_features: List[dict], fields: List[str]
+) -> list:
+    """if the paddle version is too low, it should extract features from list-dict
+
+    [
+        {input_ids: ..., token_type_ids: ...},
+        {input_ids: ..., token_type_ids: ...},
+        {input_ids: ..., token_type_ids: ...},
+    ]
+
+    Args:
+        encoded_features (List[dict]): the feature like above example
+        fields (List[str]): feature fields
+    """
+    # 1. check the value type
+    if isinstance(encoded_features, dict):
+        return [encoded_features[field] for field in fields]
+
+    # 2. extract features from old version output from tokenizer
     tensors = {}
     for field in fields:
         data = [feature[field] for feature in encoded_features]
         tensors[field] = np.array(data)
-    
+
     return [tensors[field] for field in fields]
 
 
-def num(tensor_like):
+def num(tensor_like: Any) -> float:
+    """ convert tensor loss to the num
+    """
     if paddle.is_tensor(tensor_like):
+        assert tensor_like.shape == (1,)
         return tensor_like.detach().cpu().numpy().item()
     return tensor_like
 
 
-def to_list(tensor_like):
+def to_list(tensor_like) -> List[float]:
+    """convert tensors to the list
+
+    Args:
+        tensor_like (_type_): tensor object
+
+    Returns:
+        list: the python list object
+    """
     if paddle.is_tensor(tensor_like):
         return tensor_like.detach().cpu().numpy().tolist()
     return list(tensor_like)
 
 
 def lists_to_tensors(list_features, place=None) -> List[Tensor]:
+    """
+
+    Args:
+        list_features (_type_): _description_
+        place (_type_, optional): _description_. Defaults to None.
+
+    Returns:
+        List[Tensor]: _description_
+    """
     tensors = []
     kwargs = {'place': place} if place else {}
     for list_feature in list_features:
@@ -103,6 +144,17 @@ def lists_to_tensors(list_features, place=None) -> List[Tensor]:
 
 
 def get_metric(name: str, **kwargs) -> Metric:
+    """
+
+    Args:
+        name (str): _description_
+
+    Raises:
+        NotImplementedError: _description_
+
+    Returns:
+        Metric: _description_
+    """
     if name == 'acc':
         return Accuracy(**kwargs)
     if name == 'precision':

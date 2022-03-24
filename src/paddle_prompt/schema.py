@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from dataclasses_json import dataclass_json
 from paddle.io import Dataset
@@ -39,16 +39,28 @@ class InputExample:
     guid: Optional[Union[int, str]] = None  # store the union id for example
     text_pair: Optional[str] = None  # for sentence pair task
     target_text: Optional[str] = None  # for generation task
-    meta: Dict[str, Any] = field(default_factory=dict)  # store the meta data of training example
+
+    # store the meta data of training example
+    meta: Dict[str, Any] = field(default_factory=dict)
 
     @property
-    def text_or_pairs(self):
+    def text_or_pairs(self) -> Union[str, Tuple[str, str]]:
+        """if text_pair is None, return text. So, it a single text classification task.
+
+        if text_pair is not None, return (text, text_pair). So it's a text
+        matching classification task.
+
+        Returns:
+            Union[str, Tuple[str, str]]: the result of the training text
+        """
         if self.text_pair:
             return self.text, self.text_pair
         return self.text
 
 
 class ExampleDataset(Dataset):
+    """Dataset Wrapper for InputExample
+    """
     def __init__(self, examples: List[InputExample]):
         super().__init__()
         self.examples: List[InputExample] = examples

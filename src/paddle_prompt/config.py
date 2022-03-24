@@ -63,6 +63,7 @@ class Config(TrainConfigMixin, TemplateConfigMixin, VerbalizerConfigMixin):
 
     """Configuration for Training"""
     pretrained_model: str = 'ernie-1.0'
+    data_dir: str = './glue_data/tnews/'
     output_dir: str = './output'
     task: str = 'tnews'  # Dataset for classfication tasks.
     max_seq_length: int = 128  # The maximum total input sequence length after tokenization. Sequences longer than this will be truncated, sequences shorter will be padded.

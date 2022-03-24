@@ -23,10 +23,8 @@ def compute_mask_label_logits(prediction_logit: Tensor, mask_label_ids: Tensor) 
     # [batch_size, ]
     target_logp = predict_logp.index_select(index=mask_label_ids, axis=-1)
     # target_logp = target_logp - 1e32  # Apply mask
-    target_logp = paddle.log(
-        paddle.sum(
-            paddle.exp(target_logp),
-            axis=-1
-        )
+    target_logp = paddle.sum(
+        paddle.exp(target_logp),
+        axis=-1
     )
     return -target_logp

@@ -1,9 +1,10 @@
+"""Base Abstract Template class"""
 from __future__ import annotations
 
 import json
 from abc import ABC
 from collections import OrderedDict
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import numpy as np
 import paddle
@@ -31,18 +32,21 @@ def _load_label2words(file: str) -> Dict[str, List[str]]:
 
 
 class SoftMixin:
+    """Soft Template Mixin object which can handle the soft token"""
+
     def soft_token_ids(self) -> List[int]:
         """
         This function identifies which tokens are soft tokens.
 
-        Sometimes tokens in the template are not from the vocabulary, 
+        Sometimes tokens in the template are not from the vocabulary,
+
         but a sequence of soft tokens.
         In this case, you need to implement this function
         """
         raise NotImplementedError
 
 
-class Template(nn.Layer, ABC):
+class Template(nn.Layer):
     """
     abstract class for templates in prompt
 
@@ -60,9 +64,9 @@ class Template(nn.Layer, ABC):
         self.render_engine = JinjaEngine.from_file(config.template_file)
         self.tokenizer: PretrainedTokenizer = tokenizer
         self.config: Config = config
-        self.label2words: Dict[str, List[str]] = _load_label2words(config.template_file)
-        self.place = paddle.CPUPlace() if config.device == 'cpu' else paddle.CUDAPlace()
-
+        self.label2words: Dict[str, List[str]] = _load_label2words(
+            config.template_file
+        )
         self._init_max_token_num()
 
     def _init_max_token_num(self):
@@ -72,13 +76,29 @@ class Template(nn.Layer, ABC):
                 max_token_num = max(max_token_num, len(word))
         self.config.max_token_num = max_token_num
 
-    def wrap_examples(self, examples: List[InputExample], label2idx: Dict[str, int] = None):
+    def wrap_examples(
+        self,
+        examples: List[InputExample],
+        label2idx: Dict[str, int] = None
+    ):
+        """wrap examples with template and convert them to features
+            which can be feed into MLM
+
+        Args:
+            examples (List[InputExample]): the examples object
+            label2idx (Dict[str, int], optional): label to index mapper.
+                Defaults to None.
+
+        Returns:
+            List[Tensor]: the features which will be feed into MLM
+        """
         if not label2idx:
             label2idx = self.config.label2idx
 
         # 1. construct text or text pair dataset
         texts = [self.render_engine.render(example) for example in examples]
-        texts = [_resize_prediction_mask(text, self.config.max_token_num) for text in texts]
+        texts = [_resize_prediction_mask(
+            text, self.config.max_token_num) for text in texts]
         encoded_features = self.tokenizer.batch_encode(
             texts,
             max_seq_len=self.config.max_seq_length,
@@ -98,10 +118,11 @@ class Template(nn.Layer, ABC):
             label_ids = [label2idx[example.label] for example in examples]
         else:
             for example in examples:
-                example_label_ids = [label2idx[label] for label in example.label]
+                example_label_ids = [label2idx[label]
+                                     for label in example.label]
                 label_ids.append(example_label_ids)
 
-        features = [encoded_features[field] for field in fields]
+        features = extract_and_stack_by_fields(encoded_features, fields)
 
         # 3. construct prediction mask
         mask_token_id = self.tokenizer.mask_token_id
@@ -109,7 +130,8 @@ class Template(nn.Layer, ABC):
         np_prediction_mask = np.argwhere(mask_label_mask)
         prediction_mask = []
         for pre_mask in np_prediction_mask:
-            prediction_mask.append(pre_mask[0] * self.config.max_seq_length + pre_mask[1])
+            prediction_mask.append(
+                pre_mask[0] * self.config.max_seq_length + pre_mask[1])
         features.append(np.array(prediction_mask))
 
         # 4. construct mask_label_ids
@@ -131,8 +153,10 @@ class Template(nn.Layer, ABC):
         features = lists_to_tensors(features, self.config.place())
         return features
 
-    def wrap_feature(self, feature: InputFeature) -> InputFeature:
-        pass
+    def forward(self, *args, **kwargs) -> Any:
+        """should handle the template mainforce logit
 
-    def wrap_features(self, features: List[InputFeature]) -> List[InputFeature]:
-        pass
+        Returns:
+            Any: any result. TODO: define the forward result data structure.
+        """
+

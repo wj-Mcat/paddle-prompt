@@ -1,3 +1,5 @@
+pythonpath='src'
+
 [tool.mypy]
 disallow_untyped_defs = true
 warn_unused_ignores = true

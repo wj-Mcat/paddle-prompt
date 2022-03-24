@@ -18,18 +18,23 @@ root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
 
 def main():
+    """main func to run pet model"""
     # 1. load base configuration
     config: Config = Config().parse_args(known_only=True)
-    config.device = 'cpu'
-    config.template_file = os.path.join(root, 'tests/data/text_classification/manual_template.json')
+    config.device = 'gpu'
+    config.epochs = 30
+    config.data_dir = os.path.join(root, 'glue_data/tnews')
+    config.template_file = os.path.join(
+        config.data_dir, 'manual_template.json')
 
     processor = TNewsDataProcessor(
-        data_dir=os.path.join(root, 'tests/data/text_classification'),
-        index=''
+        data_dir=config.data_dir,
+        index='_0'
     )
     tokenizer = ErnieTokenizer.from_pretrained(config.pretrained_model)
     template = ManualTemplate(tokenizer, config)
-    verbalizer = ManualVerbalizer(tokenizer, label_map=template.label2words, config=config)
+    verbalizer = ManualVerbalizer(
+        tokenizer, label_map=template.label2words, config=config)
     trainer = Trainer(
         config=config,
         processor=processor,
@@ -40,7 +45,7 @@ def main():
         verbalizer=verbalizer
     )
     trainer.train()
-    
+
 
 if __name__ == '__main__':
     main()
