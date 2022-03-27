@@ -76,6 +76,16 @@ class Template(nn.Layer):
                 max_token_num = max(max_token_num, len(word))
         self.config.max_token_num = max_token_num
 
+    def _get_mask_id(self) -> int:
+        # TODO: to be removed, this code is to fix the issue of paddlenlp
+        special_tokens = [token for token in self.tokenizer.all_special_tokens if token != self.config.mask_token]
+        special_ids: List[int] = self.tokenizer.convert_tokens_to_ids(special_tokens)
+        ids = self.tokenizer.convert_tokens_to_ids([self.config.mask_token])
+        ids = [id for id in ids if id not in special_ids]
+        assert len(ids) == 1, 'can"t get [MASK] id from tokenizer'
+        return ids[0]
+
+        
     def wrap_examples(
         self,
         examples: List[InputExample],
@@ -125,7 +135,8 @@ class Template(nn.Layer):
         features = extract_and_stack_by_fields(encoded_features, fields)
 
         # 3. construct prediction mask
-        mask_token_id = self.tokenizer.mask_token_id
+        mask_token_id = self._get_mask_id()
+        
         mask_label_mask = np.array(features[0]) == mask_token_id
         np_prediction_mask = np.argwhere(mask_label_mask)
         prediction_mask = []

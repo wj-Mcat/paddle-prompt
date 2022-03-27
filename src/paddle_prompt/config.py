@@ -1,3 +1,6 @@
+"""Configuration for paddle_prompt."""
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -37,10 +40,12 @@ class TrainConfigMixin(Tap):
 
     @property
     def label_num(self) -> int:
+        """get label number"""
         return len(self.label2idx)
 
 
 class TemplateConfigMixin(Tap):
+    """Template Config Mixin"""
     freeze_plm: bool = False  # if freeze the parameters in PLM
     mask_token: str = '[MASK]'
     max_token_num: int = 2  # max number of tokens in label slot
@@ -50,10 +55,13 @@ class TemplateConfigMixin(Tap):
 
 
 class VerbalizerConfigMixin(Tap):
+    """Verbalizer Config Mixin"""
     metric_name: str = 'acc'  # the name of metric
 
 
 class Config(TrainConfigMixin, TemplateConfigMixin, VerbalizerConfigMixin):
+    """Global Configuration
+    """
     def __init__(self, file: str = None, **kwargs):
         if file and os.path.exists(file):
             file = [file]
@@ -61,7 +69,6 @@ class Config(TrainConfigMixin, TemplateConfigMixin, VerbalizerConfigMixin):
             file = None
         super().__init__(config_files=file, **kwargs)
 
-    """Configuration for Training"""
     pretrained_model: str = 'ernie-1.0'
     data_dir: str = './glue_data/tnews/'
     output_dir: str = './output'
@@ -70,13 +77,19 @@ class Config(TrainConfigMixin, TemplateConfigMixin, VerbalizerConfigMixin):
     template: str = 'manual_template_0.json'  # the file name of template file
 
     def place(self):
+        """get the device place
+
+        Returns:
+            _type_: The device place
+        """
         if self.device == 'cpu':
             return paddle.CPUPlace()
-        return paddle.CUDAPlace()
+        return paddle.CUDAPlace(0)
 
 
 @dataclass
 class MetricReport:
+    """Metric Report"""
     acc: float = 0
     precision: float = 0
     recall: float = 0
@@ -86,6 +99,7 @@ class MetricReport:
 
     @staticmethod
     def from_sequence(truth: List, predicted: List):
+        """get the metric report from sequence"""
         predicted, truth = to_list(predicted), to_list(truth)
         metric = dict(
             acc=accuracy_score(truth, predicted),

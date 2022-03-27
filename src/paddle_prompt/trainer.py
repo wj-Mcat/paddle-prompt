@@ -104,7 +104,6 @@ class Trainer:
 
         # 3. init model related
         self.model = mlm
-        self.model.to(device=config.place())
 
         self.lr_scheduler: LRScheduler = LinearDecayWithWarmup(
             config.learning_rate,
@@ -291,6 +290,7 @@ class Trainer:
 
         for batch in self.train_dataloader:
             input_ids, _, prediction_mask, mask_label_ids, labels = batch
+
             self.on_batch_start()
 
             # pylint: disable=E1129

@@ -1,4 +1,4 @@
-# export PYTHONPATH=src/
+export PYTHONPATH=src/
 SOURCE_GLOB=$(wildcard paddle_prompt/*.py tests/**/*.py examples/*.py)
 
 IGNORE_PEP=E203,E221,E241,E272,E501,F811
@@ -122,3 +122,8 @@ deploy-version:
 .PHONY: doc
 doc:
 	mkdocs serve
+
+
+.PHONY: pet
+pet:
+	python -m examples.pet.pet

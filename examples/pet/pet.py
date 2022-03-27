@@ -21,7 +21,7 @@ def main():
     """main func to run pet model"""
     # 1. load base configuration
     config: Config = Config().parse_args(known_only=True)
-    config.device = 'gpu'
+    config.device = 'cpu'
     config.epochs = 30
     config.data_dir = os.path.join(root, 'glue_data/tnews')
     config.template_file = os.path.join(

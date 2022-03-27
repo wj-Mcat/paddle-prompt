@@ -1,9 +1,7 @@
 semver
-# paddlepaddle
 typed-argument-parser
 numpy
 dataclasses-json
-paddlepaddle
 tqdm
 paddlenlp
 loguru
