@@ -301,7 +301,7 @@ class Trainer:
                     input_ids=input_ids,
                     predict_mask=prediction_mask
                 )
-                loss = compute_mask_label_logits(logits, mask_label_ids).mean()
+                loss = self.criterion(logits, mask_label_ids).mean()
                 self.context_data.logits = logits
                 self.context_data.loss = loss
                 self.context_data.labels = labels

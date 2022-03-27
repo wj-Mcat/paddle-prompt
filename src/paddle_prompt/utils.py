@@ -107,7 +107,7 @@ def num(tensor_like: Any) -> float:
     """ convert tensor loss to the num
     """
     if paddle.is_tensor(tensor_like):
-        assert tensor_like.shape == (1,)
+        tensor_like = paddle.sum(tensor_like)
         return tensor_like.detach().cpu().numpy().item()
     return tensor_like
 
