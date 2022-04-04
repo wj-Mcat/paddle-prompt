@@ -1,9 +1,30 @@
-"""Configuration for paddle_prompt."""
+"""
+Paddle Prompt Learning - https://github.com/wj-Mcat/paddle-prompt
+
+Authors:    Jingjing WU (吴京京) <https://github.com/wj-Mcat>
+
+
+2022-now @ Copyright wj-Mcat
+
+Licensed under the Apache License, Version 2.0 (the 'License');
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an 'AS IS' BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
+from collections import OrderedDict
+import json
 
 import paddle
 import paddle.tensor as Tensor
@@ -37,11 +58,23 @@ class TrainConfigMixin(Tap):
     do_train: bool = True
     do_dev: bool = True
     do_test: bool = True
+    template_file: str = './glue_data/tnews/manual_template.json'
 
     @property
     def label_num(self) -> int:
         """get label number"""
         return len(self.label2idx)
+
+    @property
+    def label_maps(self) -> Dict[str, Union[str, List[str]]]:
+        """load label maps from template file"""
+        label2words = OrderedDict()
+        with open(self.template_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            for label, label_obj in data.items():
+                label2words[label] = label_obj['labels']
+        return label2words
+            
 
 
 class TemplateConfigMixin(Tap):
@@ -51,7 +84,6 @@ class TemplateConfigMixin(Tap):
     max_token_num: int = 2  # max number of tokens in label slot
     max_span_num: int = 1  # the max number of words in label domain
     render_engine: str = 'jinja2'  # the template render engine which convert the label-template to input strings with customized functions
-    template_file: str = './glue_data/tnews/manual_template.json'
 
 
 class VerbalizerConfigMixin(Tap):

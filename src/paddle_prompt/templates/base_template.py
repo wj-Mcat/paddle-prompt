@@ -22,15 +22,6 @@ def _resize_prediction_mask(text: str, label_size: int) -> str:
     return text.replace(mask_str, ''.join([mask_str] * label_size))
 
 
-def _load_label2words(file: str) -> Dict[str, List[str]]:
-    label2words = OrderedDict()
-    with open(file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        for label, label_obj in data.items():
-            label2words[label] = label_obj['labels']
-    return label2words
-
-
 class SoftMixin:
     """Soft Template Mixin object which can handle the soft token"""
 
@@ -64,9 +55,7 @@ class Template(nn.Layer):
         self.render_engine = JinjaEngine.from_file(config.template_file)
         self.tokenizer: PretrainedTokenizer = tokenizer
         self.config: Config = config
-        self.label2words: Dict[str, List[str]] = _load_label2words(
-            config.template_file
-        )
+        self.label2words: Dict[str, List[str]] = config.label_maps
         self._init_max_token_num()
 
     def _init_max_token_num(self):
@@ -74,7 +63,6 @@ class Template(nn.Layer):
         for words in self.label2words.values():
             for word in words:
                 max_token_num = max(max_token_num, len(word))
-        self.config.max_token_num = max_token_num
 
     def _get_mask_id(self) -> int:
         # TODO: to be removed, this code is to fix the issue of paddlenlp

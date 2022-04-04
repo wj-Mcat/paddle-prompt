@@ -1,5 +1,8 @@
 pythonpath='src'
 
+[tool.pylint]
+disable = 'W0221'
+
 [tool.mypy]
 disallow_untyped_defs = true
 warn_unused_ignores = true

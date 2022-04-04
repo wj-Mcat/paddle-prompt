@@ -1,13 +1,20 @@
+"""Ernie Pretrain Mask Language Model"""
 from __future__ import annotations
 
 import paddle
 import paddle.nn.functional as F
-from paddlenlp.transformers.ernie.modeling import ErniePretrainedModel, ErniePretrainingHeads, ErnieModel
+from paddlenlp.transformers.ernie.modeling import (
+    ErniePretrainedModel,
+    ErniePretrainingHeads,
+    ErnieModel
+)
 
 from paddle_prompt.config import Tensor, Config
 
 
 class ErnieForMLM(ErniePretrainedModel):
+    """Ernie Pretrain Mask Language Model"""
+
     def __init__(self, config: Config):
         super(ErnieForMLM, self).__init__()
         self.ernie = ErnieModel.from_pretrained(config.pretrained_model)
@@ -36,14 +43,28 @@ class ErnieForMLM(ErniePretrainedModel):
 
 
 class ErnieMLMCriterion(paddle.nn.Layer):
+    """Criterion for Ernie masked language model"""
+
     def forward(
             self,
             prediction_scores: Tensor,
             mask_label_ids: Tensor,
             masked_lm_scale: float = 1.0
     ):
+        """compute loss for masked language model
+
+        Args:
+            prediction_scores (Tensor): _description_
+            mask_label_ids (Tensor): _description_
+            masked_lm_scale (float, optional): _description_. Defaults to 1.0.
+
+        Returns:
+            _type_: _description_
+        """
         # shape = [batch_size * max_token_num, 1]   
         mask_label_ids = paddle.reshape(mask_label_ids, shape=[-1, 1])
+
+        # pylint: disable=E1129
         with paddle.static.amp.fp16_guard():
             masked_lm_loss = F.softmax_with_cross_entropy(
                 prediction_scores,
@@ -51,4 +72,4 @@ class ErnieMLMCriterion(paddle.nn.Layer):
                 ignore_index=-1
             )
             masked_lm_loss = masked_lm_loss / masked_lm_scale
-            return paddle.mean(masked_lm_loss)
+        return paddle.mean(masked_lm_loss)
