@@ -1,10 +1,11 @@
 """Base Abstract Template class"""
 from __future__ import annotations
+from ctypes import Union
 
 import json
 from abc import ABC
 from collections import OrderedDict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import paddle
@@ -48,14 +49,30 @@ class Template(nn.Layer):
             self,
             tokenizer: PretrainedTokenizer,
             config: Config,
+            label2words: Optional[Dict[str, List[str]]] = None,
+            prompt_template: Optional[Union[str, Dict[str, str]]] = None,
             **kwargs
     ):
         super().__init__(**kwargs)
 
-        self.render_engine = JinjaEngine.from_file(config.template_file)
         self.tokenizer: PretrainedTokenizer = tokenizer
         self.config: Config = config
-        self.label2words: Dict[str, List[str]] = config.label_maps
+        self.label2words: Dict[str, List[str]] = label2words or config.label_maps
+        if not self.label2words:
+            raise ValueError('label_maps is required')
+        
+        if prompt_template:
+            # apply the prompt template to all labels
+            if isinstance(prompt_template, str):
+                prompt_template = {label: prompt_template for label in self.label2words.keys()}
+            else:
+                # the labels in prompt_template should be same in label2words
+                assert set(prompt_template.keys()) == set(self.label2words.keys())
+
+            self.render_engine = JinjaEngine(prompt_template)
+        else:
+            self.render_engine = JinjaEngine.from_file(config.template_file)
+
         self._init_max_token_num()
 
     def _init_max_token_num(self):

@@ -69,13 +69,16 @@ class TrainConfigMixin(Tap):
     def label_maps(self) -> Dict[str, Union[str, List[str]]]:
         """load label maps from template file"""
         label2words = OrderedDict()
+        if not os.path.exists(self.template_file):
+            raise FileNotFoundError(f'can"t find template file: {self.template_file}')
+
         with open(self.template_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
             for label, label_obj in data.items():
                 label2words[label] = label_obj['labels']
+        if len(label2words) == 0:
+            return None
         return label2words
-            
-
 
 class TemplateConfigMixin(Tap):
     """Template Config Mixin"""

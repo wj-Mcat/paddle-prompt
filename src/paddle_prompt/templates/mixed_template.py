@@ -20,9 +20,23 @@ limitations under the License.
 """
 from __future__ import annotations
 
+from typing import Dict, List, Optional,  Union
+from paddlenlp.transformers.model_utils import PretrainedModel
+from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 from paddle_prompt.templates.base_template import Template
+from paddle_prompt.config import Config
 
 
 class MixedTemplate(Template):
-    
+    """Mixed template which can handle the soft token with template"""
+    def __init__(
+        self,
+        tokenizer: PretrainedTokenizer, config: Config,
+        plm: PretrainedModel,
+        label2words: Optional[Dict[str, List[str]]] = None,
+        prompt_template: Optional[Union[str, Dict[str, str]]] = None,
+        **kwargs
+    ):
+        super().__init__(tokenizer, config, label2words=label2words, prompt_template=prompt_template, **kwargs)
 
+        self.word_embeddings = plm.get_input_embeddings()

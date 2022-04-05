@@ -60,7 +60,7 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
-disable=import-error,arguments-differ,not-context-manager,W0511,R0801,cyclic-import,C4001
+disable=import-error,arguments-differ,not-context-manager,W0511,R0801,cyclic-import,C4001,W0223,trailing-whitespace,line-too-long,missing-function-docstring
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

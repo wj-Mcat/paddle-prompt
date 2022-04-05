@@ -1,14 +1,23 @@
 """Ernie Pretrain Mask Language Model"""
 from __future__ import annotations
+from audioop import reverse
+from dataclasses import dataclass
+from lib2to3.pgen2.tokenize import tokenize
+from typing import Optional, Type, Union
 
 import paddle
+from paddle import nn
 import paddle.nn.functional as F
+
+from paddlenlp.transformers.model_utils import PretrainedModel
+from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
+
 from paddlenlp.transformers.ernie.modeling import (
     ErniePretrainedModel,
     ErniePretrainingHeads,
     ErnieModel
 )
-
+from paddlenlp import transformers
 from paddle_prompt.config import Tensor, Config
 
 

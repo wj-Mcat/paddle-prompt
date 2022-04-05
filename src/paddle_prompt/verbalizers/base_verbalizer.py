@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 from collections import OrderedDict
 from enum import Enum
 from typing import Dict, List, Union
@@ -22,17 +21,17 @@ class Verbalizer:
     def __init__(
             self,
             tokenizer: PretrainedTokenizer,
-            label_map: Dict[str, Union[str, List[str]]],
+            label2words: Dict[str, Union[str, List[str]]],
             config: Config,
             multi_token_handler: TokenHandler = TokenHandler.mean,
     ) -> None:
         self.tokenizer = tokenizer
-        self.label_map = label_map
+        self.label2words = label2words
 
         self.label_words_ids_dict: Dict[str, List[List[int]]] = OrderedDict()
 
         label_words_ids_tensor = []
-        for label, words in label_map.items():
+        for label, words in label2words.items():
             self.label_words_ids_dict[label] = self._map_label_words_to_label_ids(words)
             label_words_ids_tensor.append(self.label_words_ids_dict[label])
 
@@ -47,13 +46,12 @@ class Verbalizer:
         for word in words:
             encoded_features = self.tokenizer.encode(
                 word,
-                return_token_type_ids=False
+                return_token_type_ids=False,
             )
             # in paddlenlp, there always special token in the sentence, so we should remove it
             label_ids.append(encoded_features['input_ids'][1: -1])
         return label_ids
 
-    @abstractmethod
     def project(self, mask_label_logits: Tensor) -> Tensor:
         """project mask label logits to label distribution
 
@@ -81,7 +79,6 @@ class Verbalizer:
 
         return self.process_logits(outputs, batch=batch, **kwargs)
 
-    @abstractmethod
     def process_logits(self, outputs: Tensor, **kwargs):
         """process the logit from the pretrained mlm mode with batch data
 

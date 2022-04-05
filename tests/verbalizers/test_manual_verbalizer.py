@@ -1,36 +1,36 @@
+"""unit test for manual verbalier"""
+# pylint: disable=redefined-outer-name
+
 import pytest
-import os
-os.environ['PYTHONPATH'] = '/home/users/wujingjing/projects/bupt-nlp/paddle-prompt/src'
+from paddlenlp.transformers.ernie.tokenizer import ErnieTokenizer
 from paddle_prompt.templates.manual_template import ManualTemplate
-from paddle_prompt.verbalizers.manual_verbalizer import ManualVerbalizer
 from paddle_prompt.plms.ernie import ErnieForMLM
 from paddle_prompt.config import Config
-from paddlenlp.transformers.ernie.tokenizer import ErnieTokenizer
 
-model_name = 'ernie-1.0'
-
-
-@pytest.fixture(scope='module')
-def config() -> Config:
-    config = Config().parse_args(known_only=True)
-    config.pretrained_model = model_name
-    return config
+MODEL_NAME = ['ernie-1.0']
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
+@pytest.mark.parametrize('model_name', MODEL_NAME)
+def config(model_name: str) -> Config:
+    config_fixture = Config().parse_args(known_only=True)
+    config_fixture.pretrained_model = model_name
+    return config_fixture
+
+
+@pytest.fixture
 def tokenizer() -> ErnieTokenizer:
-    return ErnieTokenizer.from_pretrained(model_name)
+    return ErnieTokenizer.from_pretrained(MODEL_NAME)
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def mlm(config: Config) -> ErnieForMLM:
     return ErnieForMLM(config)
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def template(config: Config, tokenizer: ErnieTokenizer) -> ManualTemplate:
     return ManualTemplate(config=config, tokenizer=tokenizer)
 
 
-def test_mlm_logits(tokenizer, mlm):
-    sentence = ''
-    pass
+# def test_mlm_logits(tokenizer, mlm):
+#     pass

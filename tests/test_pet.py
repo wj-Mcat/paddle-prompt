@@ -27,7 +27,7 @@ def test_pet(processor: DataProcessor, tokenizer: ErnieTokenizer, config: Config
     template = ManualTemplate(tokenizer, config)
 
     verbalizer = ManualVerbalizer(
-        tokenizer, label_map=template.label2words, config=config
+        tokenizer, label2words=template.label2words, config=config
     )
     trainer = Trainer(
         config=config,
