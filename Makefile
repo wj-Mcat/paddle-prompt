@@ -85,7 +85,7 @@ pytest:
 test-unit: pytest
 
 .PHONY: test
-test: lint pytest
+test: pylint pytest
 
 code:
 	code .

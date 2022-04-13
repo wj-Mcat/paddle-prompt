@@ -108,23 +108,19 @@ class LMWrapper(nn.Layer):
         Returns:
             Optional[int]: the size of the hidden size 
         """
-        if isinstance(self.plm, BertForMaskedLM):
-            return 768
-        if isinstance(self.plm, ErnieForMaskedLM):
-            return 512
-        if isinstance(self.plm, BartForConditionalGeneration):
-            return 768
-        if isinstance(self.plm, T5ForConditionalGeneration):
-            return 512
+        # TODO: get hidden size in dynamic mode
+        config: dict = getattr(self.plm, self.plm.base_model_prefix).config
+        keys = ['hidden_size', 'd_model']
+        for key in keys:
+            if key in config:
+                return config[key]
         return None
         
 
     def find_lm_head(self) -> nn.Linear:
         """head of lm is usualy a linear map function"""
-        # 
-        vocab_size, hidden_size = len(self.tokenizer), self.get_hidden_size()
+        base_model = getattr(self.plm, self.plm.base_model_prefix)
+        config: dict = base_model.config
 
-        for _, parameter in reversed(list(self.plm.parameters())):
-            if parameter.shape == (hidden_size, vocab_size):
-                return parameter
-        return None
+        if isinstance(self.plm, ErnieForMaskedLM):
+            pass

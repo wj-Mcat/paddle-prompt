@@ -48,7 +48,10 @@ class ErnieForMLM(ErniePretrainedModel):
             )
             return prediction_scores
 
-
+    def get_head_embedding(self):
+        head_parameter = self.head.predictions.decoder_weight
+        return head_parameter
+        
 class ErnieMLMCriterion(paddle.nn.Layer):
     """Criterion for Ernie masked language model"""
 

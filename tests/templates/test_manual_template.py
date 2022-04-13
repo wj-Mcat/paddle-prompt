@@ -2,7 +2,6 @@
 #pylint: disable=W0621
 import pytest
 from paddlenlp.transformers.ernie.tokenizer import ErnieTokenizer
-from sklearn import config_context
 from paddle_prompt.schema import InputExample
 from paddle_prompt.templates.manual_template import ManualTemplate
 from paddle_prompt.processors.tnews import TNewsDataProcessor

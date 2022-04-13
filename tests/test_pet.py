@@ -2,6 +2,7 @@
 Implement Paper: https://arxiv.org/abs/2001.07676
 """
 from __future__ import annotations
+import os
 
 import pytest
 from paddlenlp.transformers import ErnieTokenizer
@@ -16,14 +17,21 @@ from paddle_prompt.trainer import Trainer
 from paddle_prompt.verbalizers.manual_verbalizer import ManualVerbalizer
 
 
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+
+
 @pytest.fixture()
 def processor() -> DataProcessor:
-    processor = TNewsDataProcessor(data_dir='data/text_classification', index='')
+    processor = TNewsDataProcessor(
+        data_dir=os.path.join(ROOT_DIR, 'tests/data/text_classification'),
+        index=''
+    )
     return processor
 
 
+
 def test_pet(processor: DataProcessor, tokenizer: ErnieTokenizer, config: Config):
-    config.template_file = 'data/text_classification/manual_template.txt'
+    config.template_file = os.path.join(ROOT_DIR, 'tests/data/text_classification/manual_template.json')
     template = ManualTemplate(tokenizer, config)
 
     verbalizer = ManualVerbalizer(
