@@ -23,7 +23,7 @@ class ManualVerbalizer(Verbalizer):
         prefix: str = ''
     ) -> None:
         # TODO: make this function more readable
-        assert isinstance(label2words, OrderedDict), 'label_map object must be OrderedDict'
+        # assert isinstance(label2words, OrderedDict), 'label_map object must be OrderedDict'
 
         # TODO: handle the prefix and find related paper
         self.add_prefix(label2words, prefix)
@@ -101,13 +101,6 @@ class ManualVerbalizer(Verbalizer):
 
         words_ids = np.array(words_ids)
         words_ids_mask = np.array(words_ids_mask)
-
-        """
-         [
-             [356, 246, 456, 0],
-             [2356, 3456, 0, 0],
-         ]
-        """
         self.label_words_ids = paddle.create_parameter(
             words_ids.shape,
             dtype='int32',

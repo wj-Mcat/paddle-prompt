@@ -49,6 +49,7 @@ class Engine(ABC):
 
 
 class JinjaEngine(Engine):
+    """Jinja Engine for render the text"""
     def __init__(self, label_templates: Dict[str, str]) -> None:
         super().__init__(label_templates)
 

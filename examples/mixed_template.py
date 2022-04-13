@@ -4,8 +4,9 @@ from collections import OrderedDict
 from paddle import nn
 from paddle.optimizer import AdamW
 
-from paddlenlp.transformers.t5.modeling import T5ForConditionalGeneration
-from paddlenlp.transformers.t5.tokenizer import T5Tokenizer
+from paddlenlp.transformers.ernie.modeling import ErnieForMaskedLM
+from paddlenlp.transformers.ernie.tokenizer import ErnieTokenizer
+
 from paddlenlp.datasets import load_dataset
 
 from paddle_prompt.config import Config
@@ -23,10 +24,10 @@ dev_examples = list(dev.map(lambda x: InputExample(text_a=x['sentence'], label=x
 
 ## 2. prepare the prompt model related
 config: Config = Config().parse_args(known_only=True)
-config.pretrained_model = 't5-small'
+config.pretrained_model = 'ernie-1.0'
 
-tokenizer = T5Tokenizer.from_pretrained(config.pretrained_model)
-plm = T5ForConditionalGeneration.from_pretrained(config.pretrained_model)
+tokenizer = ErnieTokenizer.from_pretrained(config.pretrained_model)
+plm = ErnieForMaskedLM.from_pretrained(config.pretrained_model)
 
 label2words = OrderedDict({'0': 'negative', '1': 'positive'})
 template = MixedTemplate(

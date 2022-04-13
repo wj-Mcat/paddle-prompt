@@ -2,20 +2,16 @@
 from __future__ import annotations
 from ctypes import Union
 
-import json
-from abc import ABC
-from collections import OrderedDict
 from typing import Any, Dict, List, Optional
 
 import numpy as np
-import paddle
 from paddle import nn
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 
 from paddle_prompt.config import Config
-from paddle_prompt.schema import InputExample, InputFeature
+from paddle_prompt.schema import InputExample
 from paddle_prompt.templates.engine import JinjaEngine
-from paddle_prompt.utils import extract_and_stack_by_fields, lists_to_tensors
+from paddle_prompt.utils import extract_and_stack_by_fields, lists_to_tensors, get_mask_with_ids
 
 
 def _resize_prediction_mask(text: str, label_size: int) -> str:
@@ -81,6 +77,8 @@ class Template(nn.Layer):
             for word in words:
                 max_token_num = max(max_token_num, len(word))
 
+        self.config.max_token_num = max_token_num
+
     def _get_mask_id(self) -> int:
         # TODO: to be removed, this code is to fix the issue of paddlenlp
         special_tokens = [token for token in self.tokenizer.all_special_tokens if token != self.config.mask_token]
@@ -90,7 +88,6 @@ class Template(nn.Layer):
         assert len(ids) == 1, 'can"t get [MASK] id from tokenizer'
         return ids[0]
 
-        
     def wrap_examples(
         self,
         examples: List[InputExample],
@@ -140,15 +137,11 @@ class Template(nn.Layer):
         features = extract_and_stack_by_fields(encoded_features, fields)
 
         # 3. construct prediction mask
-        mask_token_id = self._get_mask_id()
-        
-        mask_label_mask = np.array(features[0]) == mask_token_id
-        np_prediction_mask = np.argwhere(mask_label_mask)
-        prediction_mask = []
-        for pre_mask in np_prediction_mask:
-            prediction_mask.append(
-                pre_mask[0] * self.config.max_seq_length + pre_mask[1])
-        features.append(np.array(prediction_mask))
+        mask_attention = get_mask_with_ids(
+            features[0],
+            self._get_mask_id()
+        ).numpy()
+        features.append(mask_attention)
 
         # 4. construct mask_label_ids
         mask_label_ids = []

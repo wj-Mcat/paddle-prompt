@@ -31,10 +31,14 @@ def main():
         data_dir=config.data_dir,
         index='_0'
     )
+
     tokenizer = ErnieTokenizer.from_pretrained(config.pretrained_model)
     template = ManualTemplate(tokenizer, config)
     verbalizer = ManualVerbalizer(
-        tokenizer, label_map=template.label2words, config=config)
+        tokenizer, 
+        label2words=template.label2words, 
+        config=config
+    )
     trainer = Trainer(
         config=config,
         processor=processor,

@@ -1,24 +1,17 @@
 """Ernie Pretrain Mask Language Model"""
 from __future__ import annotations
-from audioop import reverse
-from dataclasses import dataclass
-from lib2to3.pgen2.tokenize import tokenize
-from typing import Optional, Type, Union
 
 import paddle
-from paddle import nn
 import paddle.nn.functional as F
 
-from paddlenlp.transformers.model_utils import PretrainedModel
-from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 
 from paddlenlp.transformers.ernie.modeling import (
     ErniePretrainedModel,
     ErniePretrainingHeads,
     ErnieModel
 )
-from paddlenlp import transformers
 from paddle_prompt.config import Tensor, Config
+from paddle_prompt.utils import get_position_from_mask
 
 
 class ErnieForMLM(ErniePretrainedModel):
@@ -43,6 +36,11 @@ class ErnieForMLM(ErniePretrainedModel):
         with paddle.static.amp.fp16_guard():
             outputs: Tensor = self.ernie(input_ids)
             sequence_output, pooled_output = outputs[:2]
+
+            # check and convert to prediction position
+            if predict_mask.shape == input_ids.shape:
+                predict_mask =  get_position_from_mask(predict_mask, place=sequence_output.place)
+
             prediction_scores, _ = self.head(
                 sequence_output,
                 pooled_output,

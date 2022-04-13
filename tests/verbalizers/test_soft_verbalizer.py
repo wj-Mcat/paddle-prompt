@@ -4,7 +4,7 @@ import pytest
 from typing import Type
 from paddlenlp.transformers.model_utils import PretrainedModel 
 from paddlenlp.transformers.auto.tokenizer import AutoTokenizer
-from paddlenlp.transformers.bert.modeling import BertForMaskedLM
+from paddlenlp.transformers.bert.modeling import BertForMaskedLM 
 from paddlenlp.transformers.t5.modeling import T5ForConditionalGeneration
 from paddlenlp.transformers.bart.modeling import BartForConditionalGeneration
 
@@ -44,3 +44,4 @@ def test_find_hidden_size(model_class: Type[PretrainedModel], model_name: str):
 
     hidden_size = lm_wrapper.get_hidden_size()
     assert hidden_size is not None
+

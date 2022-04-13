@@ -14,9 +14,9 @@ from paddlenlp.transformers.auto.tokenizer import AutoTokenizer
 from paddlenlp.transformers.ernie.tokenizer import ErnieTokenizer
 from paddlenlp.transformers.ernie.modeling import ErnieForMaskedLM
 
-from paddlenlp.transformers.bert.modeling import BertForMaskedLM
 from paddlenlp.transformers.bart.modeling import BartForConditionalGeneration
 from paddlenlp.transformers.t5.modeling import T5ForConditionalGeneration
+from paddlenlp.transformers.bert.modeling import BertForMaskedLM
 
 
 from paddle_prompt.plms.ernie import ErnieForMLM
@@ -108,40 +108,23 @@ class LMWrapper(nn.Layer):
         Returns:
             Optional[int]: the size of the hidden size 
         """
-        vocab_size = len(self.tokenizer)
-        
-        # TODO:  we only support bert, bart, t5 model
-        for parameter in self.plm.parameters():
-            pass
-
-        if isinstance(self.plm, ErnieForMaskedLM):
-            return self.plm.ernie.encoder.layer[1].output_layer.weight.shape
-        
         if isinstance(self.plm, BertForMaskedLM):
-            return self.plm.bert.encoder.layer[-1].output_layer.weight.shape
-        
+            return 768
+        if isinstance(self.plm, ErnieForMaskedLM):
+            return 512
         if isinstance(self.plm, BartForConditionalGeneration):
-            return self.plm.bart.encoder.layer[-1].output_layer.weight.shape
-
+            return 768
         if isinstance(self.plm, T5ForConditionalGeneration):
-            return self.plm.t5.encoder.layer[-1].output_layer.weight.shape
-            
+            return 512
         return None
+        
 
     def find_lm_head(self) -> nn.Linear:
         """head of lm is usualy a linear map function"""
         # 
-        vocab_size, hidden_size = self.tokenizer.vocab_size, self.plm.config["hidden_size"]
-        def find_target_head(module: nn.Layer, deep: int = 0) -> nn.Linear:
-            if deep == 5:
-                return None
-            if isinstance(module, nn.Linear) and module.weight.shape == (hidden_size, vocab_size):
-                return module
-            
-            for _, child in reversed(module.named_children()):
-                result = find_target_head(child, deep + 1)
-                if result is not None:
-                    return result
-            return None
-        
-        return find_target_head(self.plm)
+        vocab_size, hidden_size = len(self.tokenizer), self.get_hidden_size()
+
+        for _, parameter in reversed(list(self.plm.parameters())):
+            if parameter.shape == (hidden_size, vocab_size):
+                return parameter
+        return None
