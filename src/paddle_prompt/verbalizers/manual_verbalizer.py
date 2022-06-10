@@ -14,18 +14,20 @@ from paddle_prompt.verbalizers.base_verbalizer import Verbalizer
 
 
 class ManualVerbalizer(Verbalizer):
+    """Manual Verbalizer which is used to generate the label distribution"""
     def __init__(
-            self,
-            tokenizer: PretrainedTokenizer,
-            label_map: Dict[str, Union[str, List[str]]],
-            config: Config,
-            prefix: str = ''
+        self,
+        tokenizer: PretrainedTokenizer,
+        label2words: Dict[str, Union[str, List[str]]],
+        config: Config,
+        prefix: str = ''
     ) -> None:
-        assert isinstance(label_map, OrderedDict), 'label_map object must be OrderedDict'
+        # TODO: make this function more readable
+        # assert isinstance(label2words, OrderedDict), 'label_map object must be OrderedDict'
 
         # TODO: handle the prefix and find related paper
-        self.add_prefix(label_map, prefix)
-        super().__init__(tokenizer, label_map, config=config)
+        self.add_prefix(label2words, prefix)
+        super().__init__(tokenizer, label2words, config=config)
         self.generate_parameters()
 
     def add_prefix(self, label_map: Dict[str, Union[str, List[str]]], prefix: str):
@@ -99,13 +101,6 @@ class ManualVerbalizer(Verbalizer):
 
         words_ids = np.array(words_ids)
         words_ids_mask = np.array(words_ids_mask)
-
-        """
-         [
-             [356, 246, 456, 0],
-             [2356, 3456, 0, 0],
-         ]
-        """
         self.label_words_ids = paddle.create_parameter(
             words_ids.shape,
             dtype='int32',

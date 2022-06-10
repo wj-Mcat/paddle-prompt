@@ -33,11 +33,11 @@ from paddle.io import Dataset
 class InputExample:
     """Input Example Data Structure for training data
     """
-    text: str  # source sentence
+    text_a: str  # source sentence
     label: Union[str, List[str]]  # label field
 
     guid: Optional[Union[int, str]] = None  # store the union id for example
-    text_pair: Optional[str] = None  # for sentence pair task
+    text_b: Optional[str] = None  # for sentence pair task
     target_text: Optional[str] = None  # for generation task
 
     # store the meta data of training example
@@ -53,14 +53,15 @@ class InputExample:
         Returns:
             Union[str, Tuple[str, str]]: the result of the training text
         """
-        if self.text_pair:
-            return self.text, self.text_pair
-        return self.text
+        if self.text_b:
+            return self.text_a, self.text_b
+        return self.text_a
 
 
 class ExampleDataset(Dataset):
     """Dataset Wrapper for InputExample
     """
+
     def __init__(self, examples: List[InputExample]):
         super().__init__()
         self.examples: List[InputExample] = examples

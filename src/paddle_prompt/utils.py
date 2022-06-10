@@ -1,4 +1,23 @@
-"""Base Data Processors"""
+"""
+Paddle Prompt Learning - https://github.com/wj-Mcat/paddle-prompt
+
+Authors:    Jingjing WU (吴京京) <https://github.com/wj-Mcat>
+
+
+2022-now @ Copyright wj-Mcat
+
+Licensed under the Apache License, Version 2.0 (the 'License');
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an 'AS IS' BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 from __future__ import annotations
 from ctypes import Union
 from typing import Dict, List, Any
@@ -9,6 +28,8 @@ from paddle.io import Dataset
 from paddle.metric import Metric, Accuracy, Precision, Recall
 
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
+from sklearn.neighbors import NearestNeighbors
+from soupsieve import select_one
 
 from paddle_prompt.config import Tensor
 
@@ -163,3 +184,63 @@ def get_metric(name: str, **kwargs) -> Metric:
         return Recall(**kwargs)
 
     raise NotImplementedError
+
+def get_mask_with_ids(input_ids: Tensor, ids: Union[int, List[int]]):
+
+    if not paddle.is_tensor(input_ids):
+        input_ids = paddle.to_tensor(input_ids)
+
+    if isinstance(ids, int):
+        ids = [ids]
+    
+    one_mask = paddle.ones_like(input_ids)
+
+    mask = paddle.zeros_like(input_ids)
+    for mask_id in ids:
+        mask = paddle.where(input_ids == mask_id, one_mask, mask)
+    return mask
+
+
+def get_position_from_mask(mask: Tensor, place = None) -> Tensor:
+    """get the position tensor by mask,
+        in order to be used in paddle.gather(x, index)
+
+    Args:
+        mask (Tensor): the mask tensor which should be 2-D
+
+    Returns:
+        Tensor: the mask position to be used in gather, which should be 1-D
+    """
+    if not paddle.is_tensor(mask):
+        mask = paddle.to_tensor(mask)
+
+    if len(mask.shape) != 2:
+        raise ValueError("mask should be 2-D")
+
+    # 1. compute the relative positions
+    positions = []
+    seq_len = mask.shape[1]
+    for vector in mask:
+        start, end = seq_len, -1
+
+        for index, item in enumerate(vector):
+            if paddle.equal(item, 1):
+                start = min(start, index)
+                end = max(end, index)
+        
+        if start > end:
+            positions.append((None, None))
+        else:
+            positions.append((start, end))
+    
+    # 2. convert to tensor
+    position_ids = []
+    for index, (start, end) in enumerate(positions):
+        if start is None or end is None:
+            continue
+        
+        pre_index = index * seq_len
+        for i in range(start, end + 1):
+            position_ids.append(pre_index + i)
+        
+    return paddle.to_tensor(position_ids, place = place)

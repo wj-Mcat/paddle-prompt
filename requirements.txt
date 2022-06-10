@@ -3,6 +3,7 @@ typed-argument-parser
 numpy
 dataclasses-json
 tqdm
+paddlepaddle
 paddlenlp
 loguru
 visualdl

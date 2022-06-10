@@ -29,7 +29,7 @@ class TNewsDataProcessor(DataProcessor):
             for line in file_handler:
                 data = json.loads(line)
                 examples.append(InputExample(
-                    text=data['sentence'],
+                    text_a=data['sentence'],
                     guid=data['id'],
                     label=data['label_desc'],
                     meta={

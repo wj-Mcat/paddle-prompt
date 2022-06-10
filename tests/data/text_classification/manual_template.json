@@ -3,19 +3,19 @@
         "labels": [
             "订闹钟"
         ],
-        "template": "{{text}}；这是在[MASK]"
+        "template": "{{text_a}}；这是在[MASK]"
     },
     "greet": {
         "labels": [
             "打招呼"
         ],
-        "template": "{{text}}；这是在[MASK]"
+        "template": "{{text_a}}；这是在[MASK]"
     },
     "weather": {
         "labels": [
             "查天气"
         ],
-        "template": "{{text}}；这是在[MASK]"
+        "template": "{{text_a}}；这是在[MASK]"
     }
 }
 

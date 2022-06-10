@@ -1,34 +1,22 @@
 """Base Abstract Template class"""
 from __future__ import annotations
+from ctypes import Union
 
-import json
-from abc import ABC
-from collections import OrderedDict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-import paddle
 from paddle import nn
 from paddlenlp.transformers.tokenizer_utils import PretrainedTokenizer
 
 from paddle_prompt.config import Config
-from paddle_prompt.schema import InputExample, InputFeature
+from paddle_prompt.schema import InputExample
 from paddle_prompt.templates.engine import JinjaEngine
-from paddle_prompt.utils import extract_and_stack_by_fields, lists_to_tensors
+from paddle_prompt.utils import extract_and_stack_by_fields, lists_to_tensors, get_mask_with_ids
 
 
 def _resize_prediction_mask(text: str, label_size: int) -> str:
     mask_str = '[MASK]'
     return text.replace(mask_str, ''.join([mask_str] * label_size))
-
-
-def _load_label2words(file: str) -> Dict[str, List[str]]:
-    label2words = OrderedDict()
-    with open(file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        for label, label_obj in data.items():
-            label2words[label] = label_obj['labels']
-    return label2words
 
 
 class SoftMixin:
@@ -57,16 +45,30 @@ class Template(nn.Layer):
             self,
             tokenizer: PretrainedTokenizer,
             config: Config,
+            label2words: Optional[Dict[str, List[str]]] = None,
+            prompt_template: Optional[Union[str, Dict[str, str]]] = None,
             **kwargs
     ):
         super().__init__(**kwargs)
 
-        self.render_engine = JinjaEngine.from_file(config.template_file)
         self.tokenizer: PretrainedTokenizer = tokenizer
         self.config: Config = config
-        self.label2words: Dict[str, List[str]] = _load_label2words(
-            config.template_file
-        )
+        self.label2words: Dict[str, List[str]] = label2words or config.label_maps
+        if not self.label2words:
+            raise ValueError('label_maps is required')
+        
+        if prompt_template:
+            # apply the prompt template to all labels
+            if isinstance(prompt_template, str):
+                prompt_template = {label: prompt_template for label in self.label2words.keys()}
+            else:
+                # the labels in prompt_template should be same in label2words
+                assert set(prompt_template.keys()) == set(self.label2words.keys())
+
+            self.render_engine = JinjaEngine(prompt_template)
+        else:
+            self.render_engine = JinjaEngine.from_file(config.template_file)
+
         self._init_max_token_num()
 
     def _init_max_token_num(self):
@@ -74,6 +76,7 @@ class Template(nn.Layer):
         for words in self.label2words.values():
             for word in words:
                 max_token_num = max(max_token_num, len(word))
+
         self.config.max_token_num = max_token_num
 
     def _get_mask_id(self) -> int:
@@ -85,7 +88,6 @@ class Template(nn.Layer):
         assert len(ids) == 1, 'can"t get [MASK] id from tokenizer'
         return ids[0]
 
-        
     def wrap_examples(
         self,
         examples: List[InputExample],
@@ -135,15 +137,11 @@ class Template(nn.Layer):
         features = extract_and_stack_by_fields(encoded_features, fields)
 
         # 3. construct prediction mask
-        mask_token_id = self._get_mask_id()
-        
-        mask_label_mask = np.array(features[0]) == mask_token_id
-        np_prediction_mask = np.argwhere(mask_label_mask)
-        prediction_mask = []
-        for pre_mask in np_prediction_mask:
-            prediction_mask.append(
-                pre_mask[0] * self.config.max_seq_length + pre_mask[1])
-        features.append(np.array(prediction_mask))
+        mask_attention = get_mask_with_ids(
+            features[0],
+            self._get_mask_id()
+        ).numpy()
+        features.append(mask_attention)
 
         # 4. construct mask_label_ids
         mask_label_ids = []
