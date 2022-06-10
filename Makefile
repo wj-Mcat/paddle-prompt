@@ -126,4 +126,4 @@ doc:
 
 .PHONY: pet
 pet:
-	python -m examples.pet.pet
+	python -m examples.run_pet
